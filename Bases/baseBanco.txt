@@ -5,8 +5,6 @@ Pessoa (Armazena informações gerais de indivíduos - clientes e autores)
 [VARCHAR 11] → CPF (Único)
 [DATE] → Data de Nascimento
 [VARCHAR 100] → E-mail (Único)
-[VARCHAR 30] → Nome de Usuário (Único)
-[VARCHAR 255] → Senha (Hash armazenado de forma segura)
 [VARCHAR 15] → Telefone
 
 Endereço (Relaciona cada pessoa a um endereço)

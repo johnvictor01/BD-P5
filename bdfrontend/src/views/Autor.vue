@@ -10,11 +10,14 @@
         </div>
         <h2>Suas Obras</h2>
         <Obras/>
-        <DashBoard/>
         <br>
         <ButtonSolicitarPubli/>
         <br>
+        <DashBoard/>
+        <br>
         <ButtonSolicitarEditPubli/>
+        <br>
+        <Footer/>
 
     </div>
 </template>
@@ -25,6 +28,7 @@ import DashBoard from '../components/DashBoard.vue'
 import Obras from '../components/Obras.vue'
 import ButtonSolicitarPubli from '../components/ButtonSolicitarPubli.vue'
 import ButtonSolicitarEditPubli from '../components/ButtonSolicitarEditPubli.vue'
+import Footer from '../components/Footer.vue'
 
 export default {
     name: 'Autor',
@@ -42,7 +46,8 @@ export default {
         DashBoard,
         Obras,
         ButtonSolicitarPubli,
-        ButtonSolicitarEditPubli
+        ButtonSolicitarEditPubli,
+        Footer
     }
 }
 
