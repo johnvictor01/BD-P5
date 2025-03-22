@@ -1,0 +1,85 @@
+Pessoa (Armazena informações gerais de indivíduos - clientes e autores)
+[ID] → ID da Pessoa (Chave primária)
+[VARCHAR 100] → Nome
+[VARCHAR 100] → Sobrenome
+[VARCHAR 11] → CPF (Único)
+[DATE] → Data de Nascimento
+[VARCHAR 100] → E-mail (Único)
+[VARCHAR 30] → Nome de Usuário (Único)
+[VARCHAR 255] → Senha (Hash armazenado de forma segura)
+[VARCHAR 15] → Telefone
+
+Endereço (Relaciona cada pessoa a um endereço)
+[ID] → ID do Endereço (Chave primária)
+[ID] → ID da Pessoa (Chave estrangeira de Pessoa - FK)
+[VARCHAR 200] → Rua
+[VARCHAR 10] → Número
+[VARCHAR 100] → Bairro
+[VARCHAR 100] → Cidade
+[VARCHAR 2] → Estado (Sigla ex: SP, RJ, BA)
+[VARCHAR 8] → CEP
+[VARCHAR 4] → País (Código ex: BRA, USA, FRA)
+
+Cliente (Extensão de Pessoa - Quem compra a arte)
+[ID] → ID da Pessoa (Chave estrangeira de Pessoa - FK)
+[VARCHAR 15] → Matrícula de Cliente (Gerada pelo sistema)
+[INT] → Quantidade de obras compradas (Usado para aplicar descontos)
+[VARCHAR 30] → Nome de Usuário 
+[VARCHAR 255] → Senha (Hash)
+[TEXT] → Recomendações (Sugestões de obras baseadas em compras anteriores - ex: "Paisagista")
+
+Autor (Extensão de Pessoa - Quem cria a arte)
+[ID] → ID da Pessoa (Chave estrangeira de Pessoa - FK)
+[VARCHAR 15] → Matrícula do Autor na Galeria (Gerada pelo sistema)
+[VARCHAR 30] → Nome de Usuário 
+[VARCHAR 255] → Senha (Hash)
+
+ObraDeArte (Registro das obras de arte disponíveis ou vendidas)
+[ID] → ID da ObraDeArte (Chave primária)
+[LONGBLOB] → Imagem (Path/Blob)
+[VARCHAR 10] → Tipo de Arquivo (jpg, png, etc.)
+[VARCHAR 200] → Título
+[TEXT] → Descrição da obra
+[DATE] → Data de Publicação
+[VARCHAR 60] → Estilo de Arte (Referência a EstiloDeArte)
+[ID] → Autor (Referência a Autor - FK de Pessoa)
+[VARCHAR 4] → País da Galeria (Código do país, ex: BRA, USA)
+[FLOAT] → Altura da obra em cm
+[FLOAT] → Largura da obra em cm
+
+Galeria (Armazena as obras disponíveis para venda e seus valores)
+[ID] → ID da Obra na Galeria (Chave primária)
+[ID] → ID da Obra (Referência a ObraDeArte - FK)
+[DECIMAL 11,2] → Valor da obra na galeria
+[TINYINT 1] → Status (0 = Indisponível, 1 = Disponível, 2 = Disponível para compra múltipla)
+
+Venda (Registro de compras efetuadas, vinculado ao cliente e à galeria)
+[ID] → ID da Venda (Chave primária)
+[ID] → ID do Cliente (Referência a Cliente - FK de Pessoa)
+[ID] → ID do Funcionário (Referência a Funcionário - FK) 
+[VARCHAR 20] → ID do Pedido (Número único de referência ao pedido realizado)
+[DECIMAL 10,2] → Valor Total da Venda (Somatório do pedido na hora da compra)
+[DATE] → Data da Venda
+
+Pedido (Detalha quais obras foram compradas em cada venda)
+[ID] → ID do Pedido (Chave primária)
+[ID] → ID da Venda (Referência a Venda - FK)
+[ID] → ID da Obra (Referência a ObraDeArte - FK)
+[DECIMAL 10,2] → Valor da Obra (Valor individual da obra no momento da compra)
+
+Pagamento (Registra os pagamentos das vendas e suas situações)
+[ID] → ID do Pagamento (Chave primária)
+[ID] → ID da Venda (Referência a Venda - FK)
+[DECIMAL 10,2] → Valor Total Pago (Confirmado na transação)
+[VARCHAR 20] → Método de Pagamento (Ex: Cartão, Boleto, Pix)
+[TINYINT 1] → Situação (1 = Aprovado, 2 = Rejeitado)
+
+
+Funcionário (Registra funcionários que intermediam vendas)
+[ID] → ID do Funcionário (Chave primária)
+[ID] → ID da Pessoa (Chave estrangeira de Pessoa - FK)
+[VARCHAR 30] → Nome de Usuário (Único)
+[VARCHAR 255] → Senha (Hash armazenado de forma segura)
+[VARCHAR 30] → Cargo (Ex: Atendente, Gerente, Administrador)
+[DATE] → Data de Contratação
+[DECIMAL 10,2] → Salário
