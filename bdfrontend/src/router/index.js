@@ -65,6 +65,24 @@ const routes = [
     component: () => import(/* webpackChunkName: "about" */ '../views/LoginCliente.vue')
   },
   
+  {
+    path: '/loginAutor',
+    name: 'loginAutor',
+    // route level code-splitting
+    // this generates a separate chunk (about.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () => import(/* webpackChunkName: "about" */ '../views/LoginAutor.vue')
+  },
+  
+  {
+    path: '/loginCollaborator',
+    name: 'loginCollaborator',
+    // route level code-splitting
+    // this generates a separate chunk (about.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () => import(/* webpackChunkName: "about" */ '../views/LoginColaborator.vue')
+  },
+  
 ]
 
 const router = createRouter({

@@ -95,6 +95,35 @@ def usuario_logado():
 
 
 
+
+
+#========================================================================================================
+
+@app.route('/autor-logado', methods=['GET'])
+def usuario_logado():
+    IdAutor = session.get('IdAutor')
+
+    print("Id do Autor na sessão:", IdAutor) 
+
+    if not IdAutor:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+    
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM Autor WHERE PessoaID = %s", (IdAutor))
+    usuario = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    if not usuario:
+        return jsonify({"erro": "Usuário não encontrado"}), 404
+
+    return jsonify(usuario)
+
+
+
+
 #USUARIO AUTOR INICIO
 #=======================================================================================================
 

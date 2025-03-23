@@ -7,8 +7,8 @@
   
         <nav>
           <router-link to="/loginClient">Cliente</router-link> |
-          <router-link to="/Collaborator">Colaborador</router-link> |
-          <router-link to="/Autor">Autor</router-link>
+          <router-link to="/loginCollaborator">Colaborador</router-link> |
+          <router-link to="/loginAutor">Autor</router-link>
         </nav>
       </div>
     </div>
