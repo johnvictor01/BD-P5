@@ -94,13 +94,51 @@ def usuario_logado():
 
 
 
-
 #USUARIO AUTOR INICIO
 #=======================================================================================================
+@app.route('/verificar_autor', methods=['POST'])
+def verificar_autor():
+    dados = request.get_json()
+    nome_usuario = dados.get('NomeUsuario')
+    senha = dados.get('Senha')
 
+    if not nome_usuario or not senha:
+        return jsonify({"erro": "NomeUsuario e Senha são necessários"}), 400
 
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
 
+    query_autor = """
+    SELECT c.NomeUsuario, c.Senha, p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento, p.Email, p.Telefone, c.MatriculaAutor
+    FROM Autor c
+    INNER JOIN Pessoa p ON c.PessoaID = p.ID
+    WHERE c.NomeUsuario = %s AND c.Senha = %s
+    """
 
+    cursor.execute(query_autor, (nome_usuario, senha))
+    resultado = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    if not resultado:
+        return jsonify({"erro": "Usuário ou senha incorretos"}), 401
+
+    pessoa = {
+        "ID": resultado[2],
+        "Nome": resultado[3],
+        "Sobrenome": resultado[4],
+        "CPF": resultado[5],
+        "DataNascimento": resultado[6],
+        "Email": resultado[7],
+        "Telefone": resultado[8]
+    }
+
+    session['matricula_autor'] = resultado[9]  # Armazenando Matricula do Autor na Sessão
+
+    return jsonify(pessoa)
+
+#=======================================================================================================
 
 
 
