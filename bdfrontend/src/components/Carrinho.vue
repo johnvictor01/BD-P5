@@ -3,7 +3,7 @@
       <h2>Carrinho</h2>
       <div v-if="itens.length > 0">
         <div v-for="item in itens" :key="item.id" class="item-carrinho">
-          <p>{{ item.nome }} - R$ {{ item.valor }}</p>
+          <p>{{ item.Titulo }}  - R$ {{ item.Valor }}</p>
           <button @click="removerDoCarrinho(item.id)" class="btn-remover">Remover</button>
         </div>
         <p><strong>Total:</strong> R$ {{ total }}</p>
@@ -32,7 +32,7 @@
   
       // Calcula o total do carrinho
       const total = computed(() => {
-        return props.itens.reduce((sum, item) => sum + item.valor, 0);
+        return props.itens.reduce((sum, item) => sum + item.Valor, 0);
       });
   
       // Remove um item do carrinho
@@ -95,6 +95,10 @@
     border-radius: 4px;
     cursor: pointer;
     margin-top: 10px;
+  }
+
+  p{
+    text-decoration: underline;
   }
   
   .btn-pagamento:hover {

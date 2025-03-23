@@ -76,6 +76,8 @@ CREATE TABLE Galeria (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     ObraID INT NOT NULL,
     Valor DECIMAL(11,2) NOT NULL,
+    IdDono VARCHAR(15) NOT NULL,
+    FOREIGN KEY (IdDono) REFERENCES Cliente(MatriculaCliente);
     Status TINYINT(1) NOT NULL CHECK (Status IN (0, 1, 2)),
     FOREIGN KEY (ObraID) REFERENCES ObraDeArte(ID)
 );

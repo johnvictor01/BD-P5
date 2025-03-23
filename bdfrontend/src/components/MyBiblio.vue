@@ -1,52 +1,51 @@
 <template>
     <div class="biblio-container">
         <h1>Minha Biblioteca de Obras</h1>
-        <div class="imagens-container">
-            <div v-for="(obra, index) in obras" :key="index" class="imagem-card">
-                <img :src="obra.imagem" :alt="obra.nome" />
-                <p>{{ obra.nome }}</p>
-                <small>{{ obra.informacoes }}</small>
+        <div v-if="loading">
+            <p>Carregando obras...</p>
+        </div>
+        <div v-else>
+            <div v-if="obras.length === 0">
+                <p>Nenhuma obra disponível na biblioteca.</p>
+            </div>
+            <div v-else class="imagens-container">
+                <div v-for="(obra, index) in obras" :key="index" class="imagem-card">
+                    <img :src="obra.Imagem || 'https://via.placeholder.com/150?text=Sem+Imagem'" :alt="obra.Titulo" />
+                    <p>{{ obra.Titulo }}</p>
+                    <small>{{ obra.Descricao }}</small>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 
 export default {
     name: 'MyBiblio',
-    setup() {
-        const obras = ref([]);  // Inicializa o array de obras
+    props: {
+        obras: {
+            type: Array,
+            required: true,
+            default: () => [] // Valor padrão como array vazio
+        }
+    },
+    setup(props) {
+        const loading = ref(false);  // Controla o estado de carregamento
 
-        // Função para simular a resposta do backend com dados fictícios
-        const fetchObras = async () => {
-    const response = [
-        {
-            id: 1,
-            imagem: "https://via.placeholder.com/150?text=Mona+Lisa",
-            nome: "Mona Lisa",
-            informacoes: "Uma das pinturas mais famosas de Leonardo da Vinci."
-        },
-        {
-            id: 2,
-            imagem: "https://via.placeholder.com/150?text=A+Noite+Estrelada",
-            nome: "A Noite Estrelada",
-            informacoes: "Obra-prima de Vincent van Gogh."
-        },
-        // Mais itens...
-    ];
-    obras.value = response;
-    console.log('Obras carregadas:', obras.value);  // Verificando os dados no console
-};
+        // Observa mudanças no props obras
+        watch(
+            () => props.obras,
+            (newObras) => {
+                if (newObras.length > 0) {
+                    loading.value = false;  // Finaliza o estado de carregamento
+                }
+            },
+            { immediate: true }
+        );
 
-
-        // Chama a função de buscar as obras assim que o componente for montado
-        onMounted(() => {
-            fetchObras();
-        });
-
-        return { obras };
+        return { loading };
     }
 };
 </script>

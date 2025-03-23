@@ -6,7 +6,7 @@
         </router-link>
   
         <nav>
-          <router-link to="/Client">Cliente</router-link> |
+          <router-link to="/loginClient">Cliente</router-link> |
           <router-link to="/Collaborator">Colaborador</router-link> |
           <router-link to="/Autor">Autor</router-link>
         </nav>
