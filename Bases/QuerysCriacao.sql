@@ -1,3 +1,5 @@
+create database galeriaArte;
+
 CREATE TABLE Pessoa (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     Nome VARCHAR(100) NOT NULL,

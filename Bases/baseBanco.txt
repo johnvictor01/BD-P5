@@ -49,7 +49,7 @@ Galeria (Armazena as obras disponíveis para venda e seus valores)
 [ID] → ID da Obra na Galeria (Chave primária)
 [ID] → ID da Obra (Referência a ObraDeArte - FK)
 [DECIMAL 11,2] → Valor da obra na galeria
-[TINYINT 1] → Status (0 = Indisponível, 1 = Disponível, 2 = Disponível para compra múltipla)
+[TINYINT 1] → Status (0 = Indisponível, 1 = Disponível, 2 = Vou pedir na parte )
 
 Venda (Registro de compras efetuadas, vinculado ao cliente e à galeria)
 [ID] → ID da Venda (Chave primária)
