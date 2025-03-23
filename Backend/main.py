@@ -130,7 +130,7 @@ def obras_disponiveis():
     # Converte a imagem binária para Base64 e o Valor para float
     for obra in obras:
         if obra['Imagem']:
-            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')
+            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')  # Converte para Base64
         if obra['Valor']:
             obra['Valor'] = float(obra['Valor'])  # Converte o Valor para float
 
@@ -158,7 +158,7 @@ def obras_biblio():
     query = """
         SELECT obradearte.*
         FROM obradearte
-        JOIN galeria ON obradearte.ID = galeria.ID
+        JOIN galeria ON obradearte.ID = galeria.ObraID
         WHERE galeria.IdDono = %s AND galeria.status = 0;
     """
     cursor.execute(query, (matricula_cliente,))
@@ -166,6 +166,11 @@ def obras_biblio():
 
     cursor.close()
     conexao.close()
+
+    # Converte a imagem binária para Base64
+    for obra in obras:
+        if obra['Imagem']:
+            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')  # Converte para Base64
 
     # Retorna um array vazio se não houver obras
     if not obras:

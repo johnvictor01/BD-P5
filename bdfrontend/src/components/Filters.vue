@@ -53,8 +53,7 @@
     <!-- Lista de Obras Filtradas -->
     <div class="obras-container">
       <div v-for="obra in obrasFiltradas" :key="obra.ObraID" class="obra-card">
-        <img :src="`data:${obra.TipoArquivo};base64,${obra.Imagem}`" :alt="obra.Titulo" />
-        <h3>{{ obra.Titulo }}</h3>
+        <img :src="obra.Imagem ? `data:${obra.TipoArquivo};base64,${obra.Imagem}` : 'https://via.placeholder.com/150?text=Sem+Imagem'" :alt="obra.Titulo" />        <h3>{{ obra.Titulo }}</h3>
         <p>{{ obra.Descricao }}</p>
         <small>Estilo: {{ obra.EstiloArte }}</small>
         <p><strong>Valor:</strong> R$ {{ parseFloat(obra.Valor).toFixed(2) }}</p>

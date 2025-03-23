@@ -10,8 +10,10 @@
             </div>
             <div v-else class="imagens-container">
                 <div v-for="(obra, index) in obras" :key="index" class="imagem-card">
-                    <img :src="obra.Imagem || 'https://via.placeholder.com/150?text=Sem+Imagem'" :alt="obra.Titulo" />
-                    <p>{{ obra.Titulo }}</p>
+                    <img 
+  :src="obra.Imagem ? `data:${obra.TipoArquivo};base64,${obra.Imagem}` : 'https://via.placeholder.com/150?text=Sem+Imagem'" 
+  :alt="obra.Titulo" 
+/>                    <p>{{ obra.Titulo }}</p>
                     <small>{{ obra.Descricao }}</small>
                 </div>
             </div>
