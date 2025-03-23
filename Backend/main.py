@@ -151,7 +151,7 @@ def verificar_autor():
 
 
 @app.route('/autor-logado', methods=['GET'])
-def usuario_logado():
+def Autor_logado():
     IdAutor = session.get('IdAutor')
 
     print("Id do Autor na sessão:", IdAutor) 
