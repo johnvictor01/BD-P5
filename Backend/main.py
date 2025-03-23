@@ -31,7 +31,7 @@ def verificar_usuario():
     cursor = conexao.cursor()
 
     query_cliente = """
-    SELECT c.NomeUsuario, c.Senha, p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento, p.Email, p.Telefone, c.IdDono
+    SELECT c.NomeUsuario, c.Senha, p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento, p.Email, p.Telefone, c.MatriculaCliente
     FROM Cliente c
     INNER JOIN Pessoa p ON c.PessoaID = p.ID
     WHERE c.NomeUsuario = %s AND c.Senha = %s
@@ -158,7 +158,7 @@ def obras_biblio():
     query = """
         SELECT obradearte.*
         FROM obradearte
-        JOIN galeria ON obradearte.ObraID = galeria.ObraID
+        JOIN galeria ON obradearte.ID = galeria.ID
         WHERE galeria.IdDono = %s AND galeria.status = 0;
     """
     cursor.execute(query, (matricula_cliente,))
