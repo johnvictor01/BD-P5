@@ -34,7 +34,7 @@
     methods: {
       async handleLogin() {
         try {
-          const response = await axios.post('http://localhost:5000/verificar_usuario', {
+          const response = await axios.post('http://localhost:5000/verificar_autor', {
             NomeUsuario: this.username,
             Senha: this.password
           });
