@@ -3,6 +3,7 @@
     <CabecalhoPessoa />
     <br>
     <br />
+    <p>_</p>
     <!-- Passa obrasNaBiblio como prop para MyBiblio -->
     <MyBiblio v-if="obrasNaBiblio.length > 0" :obras="obrasNaBiblio" />
     <br>
@@ -118,6 +119,9 @@ export default {
 </script>
 
 <style>
+p{
+  margin-top: 4rem;
+}
 .Filtros {
   margin-top: 2rem;
 }

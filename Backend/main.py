@@ -89,6 +89,8 @@ def usuario_logado():
     return jsonify(usuario)
 
 #=======================================================================================================
+
+
 @app.route('/obras-disponiveis', methods=['GET'])
 def obras_disponiveis():
     matricula_cliente = session.get('matricula_cliente')
@@ -119,7 +121,7 @@ def obras_disponiveis():
             Galeria.IdDono
         FROM Galeria
         INNER JOIN ObraDeArte ON Galeria.ObraID = ObraDeArte.ID
-        WHERE Galeria.Status = 1 AND Galeria.IdDono != %s
+        WHERE Galeria.Status = 1 or Galeria.IdDono != %s
     """
     cursor.execute(query, (matricula_cliente,))
     obras = cursor.fetchall()
