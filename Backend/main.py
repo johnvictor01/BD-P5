@@ -15,7 +15,7 @@ def conectar_banco():
         database="galeriaarte"
     )
 
-
+#USUÁRIO CLIENTE INICIO
 #=======================================================================================================
 
 @app.route('/verificar_usuario', methods=['POST'])
@@ -58,7 +58,6 @@ def verificar_usuario():
     }
 
     session['matricula_cliente'] = resultado[9]  # Armazenando IdDono na sessão
-    print("IdDono armazenado na sessão:", session['matricula_cliente'])  # Depuração
 
     return jsonify(pessoa)
 
@@ -70,7 +69,7 @@ def verificar_usuario():
 def usuario_logado():
     matricula_cliente = session.get('matricula_cliente')
 
-    print("Matrícula do cliente na sessão:", matricula_cliente)  # Depuração
+    print("Matrícula do cliente na sessão:", matricula_cliente) 
 
     if not matricula_cliente:
         return jsonify({"erro": "Usuário não autenticado"}), 401
@@ -89,13 +88,31 @@ def usuario_logado():
     return jsonify(usuario)
 
 #=======================================================================================================
+#USUÁRIO CLIENTE FIM
+
+
+
+
+
+
+#USUARIO AUTOR INICIO
+#=======================================================================================================
+
+
+
+
+
+
+
+
+#=======================================================================================================
+#USUARIO AUTOR FIM
+
 
 
 @app.route('/obras-disponiveis', methods=['GET'])
 def obras_disponiveis():
     matricula_cliente = session.get('matricula_cliente')
-
-    print("IdDono na sessão:", matricula_cliente)  # Depuração
 
     if not matricula_cliente:
         return jsonify({"erro": "Não autorizado"}), 401
@@ -172,9 +189,9 @@ def obras_biblio():
     # Converte a imagem binária para Base64
     for obra in obras:
         if obra['Imagem']:
-            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')  # Converte para Base64
+            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')  
 
-    # Retorna um array vazio se não houver obras
+
     if not obras:
         return jsonify([])
 
