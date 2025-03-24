@@ -331,6 +331,49 @@ def editar_obra():
         return jsonify({"erro": f"Erro ao editar obra: {str(e)}"}), 500
 
 
+#Pergunta qual vai ser o iterador @
+@app.route('/obras-mais-caras', methods=['GET'])
+def retorna_obras_para_home():
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    query_cliente = """
+        SELECT oa.*
+        FROM ObradeArte oa
+        INNER JOIN (
+            SELECT ObraID 
+            FROM galeria 
+            ORDER BY valor DESC 
+            LIMIT 6
+        ) g ON oa.ID = g.ObraID;
+    """
+
+    cursor.execute(query_cliente, (nome_usuario, senha))
+    resultado = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    if not resultado:
+        return jsonify({"ERRO AO TENTAR CARREGAR AS IMAGENS"}), 401
+
+    obras = []
+    for obj in range(0, len(resultado)):
+        obras[obj] = {
+            "ID":resultado[obj][0],
+            "Imagem": base64.b64encode(resultado[obj][1]).decode('utf-8'),
+            "TipoArquivo": resultado[obj][2],
+            "Titulo": resultado[obj][3],
+            "Descricao": resultado[obj][4],
+            "DataPublicacao": resultado[obj][5],
+            "EstiloArte": resultado[obj][6],
+            "AutorID": resultado[obj][7],
+            "PaisGaleria": resultado[obj][8],
+            "Altura": resultado[obj][9],
+            "Largura": resultado[obj][10]
+        }
+    
+    return jsonify(obras)
 
 
 
