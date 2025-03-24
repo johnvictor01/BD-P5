@@ -511,12 +511,33 @@ def verificar_colaborador():
         "DataContratacao": resultado[10],
         "Salario": resultado[10],
     }
+
+    session['nome_colaborador'] = resultado[0]  # Armazenando Nome do Colaborador na sessão
+
     return jsonify(pessoa)
 
 """
 @app.router('/colaborado-logado', methods=['GET'])
 def funcionario_logado():
-    pass
+    
+    nome_colaborador = session.get('nome_colaborador')
+    print("Nome do Colaborador na sessão:", nome_colaborador) 
+
+    if not nome_colaborador:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+    
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM Funcionario WHERE NomeUsuario = %s", (nome_colaborador,))
+    usuario = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    if not usuario:
+        return jsonify({"erro": "Usuário não encontrado"}), 404
+
+    return jsonify(usuario)
 
 """
 
