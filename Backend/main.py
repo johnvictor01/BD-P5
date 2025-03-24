@@ -336,8 +336,8 @@ def remvover_obra():
 
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
-    query = "DELETE FROM ObradeArte WHERE ID = %s"
-    cursor.execute(query, (id_obra))
+    query = "START TRANSACTION;DELETE FROM galeria WHERE ObraID = %s;DELETE FROM ObradeArte WHERE ID = %s;COMMIT;"
+    cursor.execute(query, (id_obra, id_obra))
     resultado = cursor.fetchone()
     cursor.close()
     conexao.close()
