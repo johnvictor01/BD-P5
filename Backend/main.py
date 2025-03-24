@@ -188,6 +188,7 @@ def obras_autor():
     obras_formatadas = []
     for obra in obras_de_arte:
         obra_formatada = {
+            "id": obra['ID'],
             "imagem": f"data:{obra['TipoArquivo']};base64,{base64.b64encode(obra['Imagem']).decode('utf-8')}" if obra['Imagem'] else 'caminho/para/imagem-padrao.jpg',
             "nome": obra['Titulo'],
             "informacoes": obra['Descricao'],

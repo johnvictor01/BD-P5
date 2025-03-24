@@ -4,15 +4,16 @@
 
     <div class="SelectObra">
       <p>Selecione sua Obra:</p>
-      <select v-model="selectedObraId">
+      <select v-model="selectedObra">
         <option v-for="obra in obras" :key="obra.id" :value="obra.id">
-          {{ obra.nome }} <!-- Use o campo 'nome' da obra -->
+          {{ obra.nome }} 
         </option>
       </select>
     </div>
+
     <router-link
-      v-if="selectedObraId"
-      :to="{ name: 'FormsEditPubli', params: { id: selectedObraId } }"
+      v-if="selectedObra"
+      :to="{ name: 'FormsEditPubli', params: { id: selectedObra } }"
       class="Data_Publi"
     >
       <button class="btn-solicitar-publi">
@@ -21,6 +22,7 @@
     </router-link>
   </div>
 </template>
+
 
 <script>
 export default {
@@ -33,11 +35,13 @@ export default {
   },
   data() {
     return {
-      selectedObraId: null, // Para armazenar o ID selecionado
+      selectedObra: null, // Armazena o ID da obra selecionada
     };
   },
 };
 </script>
+
+
 
 <style>
 .SelectObra {
