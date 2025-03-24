@@ -346,6 +346,35 @@ def editar_obra():
 #USUARIO COLABORADOR INICIO
 #=======================================================================================================
 
+@app.route('/obras', methods=['GET'])
+def listar_obras():
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        
+        query = """
+        SELECT o.id, o.Titulo as nome, o.Descricao as informacoes, 
+               o.Imagem, o.TipoArquivo, p.Nome as autor
+        FROM ObraDeArte o
+        JOIN Autor a ON o.AutorID = a.PessoaID
+        JOIN Pessoa p ON a.PessoaID = p.ID
+        """
+        
+        cursor.execute(query)
+        obras = cursor.fetchall()
+        
+        for obra in obras:
+            if obra['Imagem'] is not None:
+                obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')
+        
+        return jsonify(obras)
+        
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'conexao' in locals(): conexao.close()
+
 @app.route('/remover-obra', methods=['POST'])
 def remover_obra():
     dados = request.get_json()
@@ -361,19 +390,40 @@ def remover_obra():
         # Inicia transação
         cursor.execute("START TRANSACTION")
         
-        # Remove da galeria primeiro (devido à restrição de chave estrangeira)
+        # 1. Remove da galeria primeiro (devido à restrição de chave estrangeira)
         cursor.execute("DELETE FROM galeria WHERE ObraID = %s", (id_obra,))
         
-        # Remove da obra de arte
+        # 2. Remove da obra de arte - CORREÇÃO: nome correto da tabela é ObraDeArte (com E maiúsculo)
         cursor.execute("DELETE FROM ObraDeArte WHERE ID = %s", (id_obra,))
+        
+        # Verifica se alguma linha foi afetada
+        if cursor.rowcount == 0:
+            conexao.rollback()
+            return jsonify({"erro": "Nenhuma obra encontrada com o ID fornecido"}), 404
         
         # Confirma transação
         conexao.commit()
         
-        return jsonify({"sucesso": "Imagem deletada com sucesso"}), 200
+        return jsonify({
+            "sucesso": "Obra deletada com sucesso",
+            "detalhes": {
+                "obras_removidas": cursor.rowcount,
+                "id_obra": id_obra
+            }
+        }), 200
+        
+    except mysql.connector.Error as err:
+        conexao.rollback()
+        # Tratamento específico para erros de FK
+        if err.errno == mysql.connector.errorcode.ER_ROW_IS_REFERENCED_2:
+            return jsonify({
+                "erro": "Não foi possível excluir a obra pois ela está sendo referenciada em outras tabelas",
+                "solucao": "Remova as referências antes de excluir"
+            }), 400
+        return jsonify({"erro": f"Erro ao deletar obra: {str(err)}"}), 500
     except Exception as e:
         conexao.rollback()
-        return jsonify({"erro": f"Erro ao deletar imagem: {str(e)}"}), 500
+        return jsonify({"erro": f"Erro inesperado: {str(e)}"}), 500
     finally:
         cursor.close()
         conexao.close()
