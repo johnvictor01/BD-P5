@@ -5,8 +5,7 @@
       <div class="container">
         <div class="row">
           <div class="col-md-12">
-            <h1>Olá, {{ autor.Nome }}</h1>
-            <p>Email: {{ autor.Email }}</p>
+            <h1>Olá, {{ autor.nome }}</h1>
           </div>
         </div>
       </div>
@@ -88,12 +87,11 @@
   
           this.ObrasAutor = response.data;
   
-          console.log("Obras recebidas:", response.data); // Depuração
-  
           // Garante que só valores válidos sejam armazenados
-          this.valoresObras = this.ObrasAutor
-            .map((obra) => obra.valor)
-            .filter((valor) => typeof valor === "number" && !isNaN(valor));
+          this.valoresObras = this.ObrasAutor.map((obra) => ({
+        nome: obra.nome, // Nome da obra
+        valor: obra.valor, // Valor da obra
+      }));
   
           console.log("Valores extraídos:", this.valoresObras); // Depuração
         } catch (error) {

@@ -140,10 +140,13 @@ def verificar_autor():
     return jsonify(pessoa)
 
 #==============================================================================================
+
+
 @app.route('/autor-logado', methods=['GET'])
 def autor_logado():
+    
     matricula_autor = session.get('matricula_autor')  # Recupera a matrícula do autor da sessão
-
+    print(matricula_autor)
     if not matricula_autor:
         return jsonify({"erro": "Usuário não autenticado"}), 401
     
@@ -203,38 +206,46 @@ def obras_autor():
 
 
 #=======================================================================================================
-
 @app.route('/inserir-obra', methods=['POST'])
 def inserir_obra():
     dados = request.get_json()
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
-    imgblob = dados.get('imagem')
-    imgblob = base64.b64encode(imgblob).decode('utf-8')
+    # Converte a imagem de base64 para bytes
+    imgblob = base64.b64decode(dados.get('imagem'))
 
-    username =   dados.get('usuario')
+    # Busca o ID do autor com base no nome de usuário
+    username = dados.get('usuario')
+    print(username)
     query = "SELECT PessoaID FROM Autor WHERE NomeUsuario = %s"
-    cursor.execute(query, ())
-
+    cursor.execute(query, (username,))
     id_autor = cursor.fetchone()
-    
+
+    if not id_autor:
+        return jsonify({"erro": "Autor não encontrado"}), 404
+
+    # Dados para salvar no banco de dados
     dados_para_salvar = {
-        "Image":imgblob,
-        "TipoArquivo":dados.get('tipoarquivo'),
-        "Titulo":dados.get('titulo'),
-        "Descricao":dados.get('descricao'),
-        "DataPublicacao":dados.get('dataPublicacao'),
-        "EstiloArte":dados.get('estiloArte'),
-        "AutorID":id_autor,
-        "PaisGaleria":dados.get('paisGaleria'),
-        "Altura":dados.get('altura'),
-        "Largura":dados.get('Largura')
+        "Imagem": imgblob,
+        "TipoArquivo": dados.get('tipoarquivo'),
+        "Titulo": dados.get('titulo'),
+        "Descricao": dados.get('descricao'),
+        "DataPublicacao": dados.get('dataPublicacao'),
+        "EstiloArte": dados.get('estiloArte'),
+        "AutorID": id_autor['PessoaID'],
+        "PaisGaleria": dados.get('paisGaleria'),
+        "Altura": dados.get('altura'),
+        "Largura": dados.get('largura')
     }
-    
-    query = "INSERT INTO ObraDeArte (ID, Imagem, TipoArquivo, Titulo, Descricao, DataPublicacao, EstiloArte, AutorID, PaisGaleria, Altura, Largura) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+
+    # Insere os dados no banco de dados
+    query = """
+    INSERT INTO ObraDeArte (Imagem, TipoArquivo, Titulo, Descricao, DataPublicacao, EstiloArte, AutorID, PaisGaleria, Altura, Largura)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+    """
     cursor.execute(query, (
-        dados_para_salvar["Image"],
+        dados_para_salvar["Imagem"],
         dados_para_salvar["TipoArquivo"],
         dados_para_salvar["Titulo"],
         dados_para_salvar["Descricao"],
@@ -245,15 +256,12 @@ def inserir_obra():
         dados_para_salvar["Altura"],
         dados_para_salvar["Largura"]
     ))
-    resultado = cursor.fetchone()
+    conexao.commit()
 
     cursor.close()
     conexao.close()
 
-    if not resultado:
-        return jsonify({"erro": "Alguma coisa deu errado ao inserir a imagem"}), 401
-    else:
-        return jsonify({"sucesso": "Imagem inserida com sucesso"}), 201
+    return jsonify({"sucesso": "Obra inserida com sucesso"}), 201
 
 
 
