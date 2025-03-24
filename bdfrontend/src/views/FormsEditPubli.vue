@@ -1,44 +1,20 @@
 <template>
     <div>
       <CabecalhoPessoa />
-      <Message v-show="msgvisible" :msg="msg" />
-      <div v-if="!isLoggedIn">
-        <h2>Login</h2>
-        <form @submit.prevent="login">
-          <div class="input-container">
-            <label for="usuario">Usuário</label>
-            <input type="text" id="usuario" v-model="usuario" required />
-          </div>
-  
-          <div class="input-container">
-            <label for="senha">Senha</label>
-            <input type="password" id="senha" v-model="senha" required />
-          </div>
-  
-          <div class="input-container">
-            <input type="submit" class="submit-btn" value="Entrar" />
-          </div>
-        </form>
-      </div>
-  
-      <div v-else>
         <form id="obra-form" @submit="submitForm">
           <div class="input-container">
             <label for="titulo">Título da Obra</label>
             <input type="text" id="titulo" v-model="titulo" required />
           </div>
-  
           <div class="input-container">
             <label for="descricao">Descrição</label>
             <textarea id="descricao" v-model="descricao" required></textarea>
           </div>
-  
           <div class="input-container">
             <input type="submit" class="submit-btn" :value="isEditing ? 'Salvar Edição' : 'Publicar Obra'" />
           </div>
         </form>
       </div>
-    </div>
   </template>
   
   <script>

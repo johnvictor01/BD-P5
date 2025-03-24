@@ -21,23 +21,24 @@
       
     </div>
   </template>
+
   
   <script>
   export default {
-    data() {
-      return {
-        // Dados das obras (JSON de teste)
-        obras: [
-          { nome: "vangogh", valor: 5000 },
-          { nome: "Obra 2", valor: 3000 },
-          { nome: "Obra 3", valor: 2000 },
-          { nome: "Obra 3", valor: 2000 },
-          { nome: "Obra 3", valor: 2000 },
-          { nome: "Obra 4", valor: 1000 }
-        ]
-      };
+    props: {
+      valoresObras: {
+        type: Array,
+        required: true
+      }
     },
     computed: {
+      // Criando uma lista de objetos com nome + valor das obras
+      obras() {
+        return this.valoresObras.map((valor, index) => ({
+          nome: `Obra ${index + 1}`,
+          valor: valor
+        }));
+      },
       // Calculando o total das obras
       totalValor() {
         return this.obras.reduce((sum, obra) => sum + obra.valor, 0);
@@ -61,12 +62,13 @@
     methods: {
       // Função auxiliar para definir as cores das fatias
       getColorForIndex(index) {
-        const colors = ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0'];
+        const colors = ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff', '#ff9f40'];
         return colors[index % colors.length];
       }
     }
   };
   </script>
+  
   
   <style scoped>
   * {
