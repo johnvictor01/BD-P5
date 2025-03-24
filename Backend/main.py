@@ -268,7 +268,7 @@ def inserir_obra():
         return jsonify({"erro": "Falha ao obter ID da obra"}), 500
 
     query2 = """ INSERT INTO galeria (ObraID, valor, status, IdDono)
-    VALUES (%s, 0, 2, 2305);
+    VALUES (%s, 0, 2, 230546);
     """
     cursor.execute(query2, (obraID['id'],))  # Note the comma to make it a tuple
 
