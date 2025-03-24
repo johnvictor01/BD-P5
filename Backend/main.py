@@ -337,7 +337,7 @@ def retorna_obras_para_home():
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
-    query_cliente = """
+    query = """
         SELECT oa.*
         FROM ObradeArte oa
         INNER JOIN (
@@ -348,7 +348,7 @@ def retorna_obras_para_home():
         ) g ON oa.ID = g.ObraID;
     """
 
-    cursor.execute(query_cliente, (nome_usuario, senha))
+    cursor.execute(query)
     resultado = cursor.fetchone()
 
     cursor.close()
