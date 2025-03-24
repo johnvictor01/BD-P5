@@ -207,6 +207,7 @@ def obras_autor():
 
 #=======================================================================================================
 @app.route('/inserir-obra', methods=['POST'])
+@app.route('/inserir-obra', methods=['POST'])
 def inserir_obra():
     dados = request.get_json()
     conexao = conectar_banco()
@@ -256,6 +257,21 @@ def inserir_obra():
         dados_para_salvar["Altura"],
         dados_para_salvar["Largura"]
     ))
+
+    conexao.commit()
+
+
+
+    obraID = PesquisarObraId(dados_para_salvar["Titulo"], dados_para_salvar["Descricao"], dados_para_salvar["DataPublicacao"])
+    
+    if not obraID:
+        return jsonify({"erro": "Falha ao obter ID da obra"}), 500
+
+    query2 = """ INSERT INTO galeria (ObraID, valor, status, IdDono)
+    VALUES (%s, 0, 2, 2305);
+    """
+    cursor.execute(query2, (obraID['id'],))  # Note the comma to make it a tuple
+
     conexao.commit()
 
     cursor.close()
@@ -264,6 +280,22 @@ def inserir_obra():
     return jsonify({"sucesso": "Obra inserida com sucesso"}), 201
 
 
+
+def PesquisarObraId(titulo, descricao, datapubli):
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    print("Dados passados:", titulo,descricao,datapubli)
+    query = """SELECT id FROM obradearte 
+        WHERE Titulo = %s AND Descricao = %s AND DataPublicacao = %s LIMIT 1;
+    """
+    cursor.execute(query, (titulo, descricao, datapubli))
+    obra = cursor.fetchone()  # Changed from fetchall to fetchone
+    
+    cursor.close()
+    conexao.close()
+    
+    print("Executado com sucesso, id devolvido: ", obra)
+    return obra
 
 #==============================================================================
 @app.route('/editar-obra', methods=['POST'])
