@@ -437,6 +437,53 @@ def obrasParaLiberacao():
     conexao.close()
 
 
+@app.route('/verificar-colaborador', methods=['POST'])
+def verificar_colaborador():
+    dados = request.get_json()
+    nome_usuario = dados.get('NomeUsuario')
+    senha = dados.get('Senha')
+
+    if not nome_usuario or not senha:
+        return jsonify({"erro": "NomeUsuario e Senha são necessários"}), 400
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    query = """
+    SELECT c.NomeUsuario, c.Senha, p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento, p.Email, p.Telefone,
+    c.Cargo, c.DataContratacao, c.Salario
+    FROM Funcionario c
+    INNER JOIN Pessoa p ON c.PessoaID = p.ID
+    WHERE c.NomeUsuario = %s AND c.Senha = %s
+    """
+
+    cursor.execute(query_cliente, (nome_usuario, senha))
+    resultado = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    if not resultado:
+        return jsonify({"erro": "Usuário ou senha incorretos"}), 401
+
+    pessoa = {
+        "ID": resultado[2],
+        "Nome": resultado[3],
+        "Sobrenome": resultado[4],
+        "CPF": resultado[5],
+        "DataNascimento": resultado[6],
+        "Email": resultado[7],
+        "Telefone": resultado[8],
+        "Cargo":"" resultado[9],
+        "DataContratacao": resultado[10],
+        "Salario": resultado[10],
+    }
+    return jsonify(pessoa)
+
+
+@app.router('/fcolaborado-logado', methods=['GET'])
+def funcionario_logado():
+    pass
 
 
 
