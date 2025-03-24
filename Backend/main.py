@@ -220,7 +220,7 @@ def inserir_obra():
     id_autor = cursor.fetchone()
     
     dados_para_salvar = {
-        "Image":imgblob
+        "Image":imgblob,
         "TipoArquivo":dados.get('tipoarquivo'),
         "Titulo":dados.get('titulo'),
         "Descricao":dados.get('descricao'),
@@ -255,6 +255,45 @@ def inserir_obra():
         return jsonify({"erro": "Alguma coisa deu errado ao inserir a imagem"}), 401
     else:
         return jsonify({"sucesso": "Imagem inserida com sucesso"}), 201
+
+
+
+
+#==============================================================================
+@app.route('/editar-obra', methods=['POST'])
+def editar_obra():
+    dados = request.get_json()
+    
+    if not dados or 'id' not in dados or 'Titulo' not in dados or 'Descricao' not in dados:
+        return jsonify({"erro": "Dados incompletos"}), 400  # Retorna erro se faltar algum campo
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    query = """
+    UPDATE ObraDeArte 
+    SET Titulo = %s, Descricao = %s
+    WHERE ID = %s;
+    """
+    
+    try:
+        cursor.execute(query, (dados['Titulo'], dados['Descricao'], dados['id']))
+        conexao.commit()  # Confirma a alteração no banco
+
+        cursor.close()
+        conexao.close()
+
+        return jsonify({"sucesso": "Obra editada com sucesso"}), 200
+
+    except Exception as e:
+        conexao.rollback()  # Desfaz alterações se houver erro
+        return jsonify({"erro": f"Erro ao editar obra: {str(e)}"}), 500
+
+
+
+
+
+
 
 
         
