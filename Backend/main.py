@@ -347,23 +347,36 @@ def editar_obra():
 #=======================================================================================================
 
 @app.route('/remover-obra', methods=['POST'])
-def remvover_obra():
+def remover_obra():
     dados = request.get_json()
-    id_obra = dados.get('id_obra') #Procura Parametro corretor
+    id_obra = dados.get('id_obra')
+
+    if not id_obra:
+        return jsonify({"erro": "ID da obra é necessário"}), 400
 
     conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
-    query = "START TRANSACTION;DELETE FROM galeria WHERE ObraID = %s;DELETE FROM ObradeArte WHERE ID = %s;COMMIT;"
-    cursor.execute(query, (id_obra, id_obra))
-    resultado = cursor.fetchone()
-    cursor.close()
-    conexao.close()
+    cursor = conexao.cursor()
 
-    if not resultado:
-        return jsonify({"erro": "Alguma coisa deu errado ao tentar delata a imagem"}), 401
-    else:
-        return jsonify({"sucesso": "Imagem Deletada com sucesso"}), 201
-
+    try:
+        # Inicia transação
+        cursor.execute("START TRANSACTION")
+        
+        # Remove da galeria primeiro (devido à restrição de chave estrangeira)
+        cursor.execute("DELETE FROM galeria WHERE ObraID = %s", (id_obra,))
+        
+        # Remove da obra de arte
+        cursor.execute("DELETE FROM ObraDeArte WHERE ID = %s", (id_obra,))
+        
+        # Confirma transação
+        conexao.commit()
+        
+        return jsonify({"sucesso": "Imagem deletada com sucesso"}), 200
+    except Exception as e:
+        conexao.rollback()
+        return jsonify({"erro": f"Erro ao deletar imagem: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conexao.close()
 
 
 
@@ -374,17 +387,26 @@ def listar_obras_pendentes():
     cursor = conexao.cursor(dictionary=True)
     
     query = """
-    SELECT o.id, o.Titulo as nome, o.Descricao as informacoes, o.Imagem, 
-           a.Nome as autor, o.DataPublicacao, o.EstiloArte as estilo,
-           o.PaisGaleria, o.Altura, o.Largura, g.valor
-    FROM ObraDeArte o
-    JOIN Autor a ON o.AutorID = a.id
-    JOIN galeria g ON o.id = g.ObraID
-    WHERE g.status = 2
+        SELECT o.id, o.Titulo AS nome, o.Descricao AS informacoes, 
+               o.Imagem, o.TipoArquivo,  -- Adicionado TipoArquivo
+               p.Nome AS autor, o.DataPublicacao, o.EstiloArte AS estilo,
+               o.PaisGaleria, o.Altura, o.Largura, g.valor
+        FROM ObraDeArte o
+        JOIN Autor a ON o.AutorID = a.PessoaID
+        JOIN Pessoa p ON a.PessoaID = p.ID
+        JOIN Galeria g ON o.id = g.ObraID
+        WHERE g.status = 2
     """
     
     cursor.execute(query)
     obras = cursor.fetchall()
+    
+    # Converter a imagem binária para base64
+    for obra in obras:
+        if obra['Imagem'] is not None:
+            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')
+        else:
+            obra['Imagem'] = None
     
     cursor.close()
     conexao.close()
@@ -392,27 +414,52 @@ def listar_obras_pendentes():
     return jsonify(obras)
 
 
-# Endpoint para liberar obra
+# Endpoint unificado para liberação de obras
 @app.route('/liberar-obra', methods=['POST'])
 def liberar_obra():
     dados = request.get_json()
+    print(dados)
     
-    if not dados or 'id' not in dados or 'valor' not in dados:
-        return jsonify({"erro": "Dados incompletos"}), 400
+    # Validações
+    if not dados or 'id_obra' not in dados:
+        return jsonify({"erro": "ID da obra é obrigatório"}), 400
+    
+    # Valores padrão
+    novo_status = 1  # Status "liberado"
+    novo_valor = dados.get('valor', 0)  # Valor padrão 0 se não informado
     
     conexao = conectar_banco()
     cursor = conexao.cursor()
     
     try:
-        query = """
-        UPDATE galeria 
-        SET status = 1, valor = %s 
-        WHERE ObraID = %s
-        """
-        cursor.execute(query, (dados['valor'], dados['id']))
+        # Query dinâmica baseada nos parâmetros recebidos
+        if 'valor' in dados:
+            query = """
+            UPDATE galeria 
+            SET status = %s, valor = %s 
+            WHERE ObraID = %s
+            """
+            params = (novo_status, novo_valor, dados['id_obra'])
+        else:
+            query = """
+            UPDATE galeria 
+            SET status = %s 
+            WHERE ObraID = %s
+            """
+            params = (novo_status, dados['id_obra'])
+        
+        cursor.execute(query, params)
         conexao.commit()
         
-        return jsonify({"sucesso": "Obra liberada com sucesso"}), 200
+        return jsonify({
+            "sucesso": "Obra liberada com sucesso",
+            "detalhes": {
+                "id_obra": dados['id_obra'],
+                "novo_status": novo_status,
+                "novo_valor": novo_valor if 'valor' in dados else None
+            }
+        }), 200
+        
     except Exception as e:
         conexao.rollback()
         return jsonify({"erro": str(e)}), 500
@@ -421,20 +468,6 @@ def liberar_obra():
         conexao.close()
 
 
-@app.route('/Liberar-Obra', methods=['POST'])
-def obrasParaLiberacao():
-
-    dados = request.get_json()
-    id_obra = dados.get('id_obra') 
-
-    conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
-
-    query = "UPDATE galeria SET Status = 1 WHERE ObraID = %s"
-    cursor.execute(query, (id_obra))
-    resultado = cursor.fetchone()
-    cursor.close()
-    conexao.close()
 
 
 @app.route('/verificar-colaborador', methods=['POST'])
@@ -457,7 +490,7 @@ def verificar_colaborador():
     WHERE c.NomeUsuario = %s AND c.Senha = %s
     """
 
-    cursor.execute(query_cliente, (nome_usuario, senha))
+    cursor.execute(query, (nome_usuario, senha))
     resultado = cursor.fetchone()
 
     cursor.close()
@@ -474,18 +507,18 @@ def verificar_colaborador():
         "DataNascimento": resultado[6],
         "Email": resultado[7],
         "Telefone": resultado[8],
-        "Cargo":"" resultado[9],
+        "Cargo": resultado[9],
         "DataContratacao": resultado[10],
         "Salario": resultado[10],
     }
     return jsonify(pessoa)
 
-
-@app.router('/fcolaborado-logado', methods=['GET'])
+"""
+@app.router('/colaborado-logado', methods=['GET'])
 def funcionario_logado():
     pass
 
-
+"""
 
 
 
