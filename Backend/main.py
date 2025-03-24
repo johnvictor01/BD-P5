@@ -332,6 +332,20 @@ def editar_obra():
 
 
 
+
+
+    
+#=======================================================================================================
+#USUARIO AUTOR FIM
+#=======================================================================================================
+
+
+
+
+#=======================================================================================================
+#USUARIO COLABORADOR INICIO
+#=======================================================================================================
+
 @app.route('/remover-obra', methods=['POST'])
 def remvover_obra():
     dados = request.get_json()
@@ -350,21 +364,77 @@ def remvover_obra():
     else:
         return jsonify({"sucesso": "Imagem Deletada com sucesso"}), 201
 
+
+
+
+# Endpoint para listar obras pendentes (status = 2)
+@app.route('/obras-pendentes', methods=['GET'])
+def listar_obras_pendentes():
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
     
-#=======================================================================================================
-#USUARIO AUTOR FIM
-#=======================================================================================================
+    query = """
+    SELECT o.id, o.Titulo as nome, o.Descricao as informacoes, o.Imagem, 
+           a.Nome as autor, o.DataPublicacao, o.EstiloArte as estilo,
+           o.PaisGaleria, o.Altura, o.Largura, g.valor
+    FROM ObraDeArte o
+    JOIN Autor a ON o.AutorID = a.id
+    JOIN galeria g ON o.id = g.ObraID
+    WHERE g.status = 2
+    """
+    
+    cursor.execute(query)
+    obras = cursor.fetchall()
+    
+    cursor.close()
+    conexao.close()
+    
+    return jsonify(obras)
 
 
+# Endpoint para liberar obra
+@app.route('/liberar-obra', methods=['POST'])
+def liberar_obra():
+    dados = request.get_json()
+    
+    if not dados or 'id' not in dados or 'valor' not in dados:
+        return jsonify({"erro": "Dados incompletos"}), 400
+    
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    
+    try:
+        query = """
+        UPDATE galeria 
+        SET status = 1, valor = %s 
+        WHERE ObraID = %s
+        """
+        cursor.execute(query, (dados['valor'], dados['id']))
+        conexao.commit()
+        
+        return jsonify({"sucesso": "Obra liberada com sucesso"}), 200
+    except Exception as e:
+        conexao.rollback()
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        cursor.close()
+        conexao.close()
 
 
-#=======================================================================================================
-#USUARIO COLABORADOR INICIO
-#=======================================================================================================
+@app.route('/Liberar-Obra', methods=['POST'])
+def obrasParaLiberacao():
 
+    dados = request.get_json()
+    id_obra = dados.get('id_obra') 
 
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
 
-
+    query = "UPDATE galeria SET Status = 1 WHERE ObraID = %s"
+    cursor.execute(query, (id_obra))
+    resultado = cursor.fetchone()
+    cursor.close()
+    conexao.close()
 
 
 
