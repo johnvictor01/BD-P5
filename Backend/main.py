@@ -137,7 +137,6 @@ def verificar_autor():
 
     return jsonify(pessoa)
 
-
 @app.route('/autor-logado', methods=['GET'])
 def autor_logado():
     matricula_autor = session.get('matricula_autor')  # Recupera a matrícula do autor da sessão
@@ -155,6 +154,41 @@ def autor_logado():
 
     if not autor:
         return jsonify({"erro": "Autor não encontrado"}), 404
+
+    return jsonify(usuario)
+
+@app.route('/obras-autor', methods=['GET'])
+def obras_autor():
+    IdAutor = session.get('IdAutor')
+
+    print("Id do Autor na sessão:", IdAutor) 
+
+    if not IdAutor:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+    
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM ObradeArte WHERE AutorID = %s", (IdAutor))
+    obras_de_arte = curso.fetchall()
+    colecao = {"colecao":[]}
+
+    for obj in range(0, len(obras_de_arte)):
+        colecao["colecao"][obj] = {
+            "imagem": obras_de_arte[obj][1],
+            "tipo_arquivo": obras_de_arte[obj][2],
+            "titulo": obras_de_arte[obj][3],
+            "descricao": obras_de_arte[obj][4],
+            "data_publicacao": obras_de_arte[obj][5],
+            "estilo_arte": obras_de_arte[obj][6],
+            "pais_galeria":obras_de_arte[obj][7],
+            "altura": obras_de_arte[obj][8],
+            "largura": obras_de_arte[obj][9],
+            "valor": obras_de_arte[obj][10],
+            "status": obras_de_arte[obj][11] #Não sei se vai preicsar!
+        }
+
+    cursor.close()
+    conexao.close()
 
     return jsonify(usuario)
 #=======================================================================================================
