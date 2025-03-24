@@ -161,7 +161,8 @@ def autor_logado():
 
     return jsonify(usuario)
 
-#======================================
+#===================================================================================
+
 @app.route('/obras-autor', methods=['GET'])
 def obras_autor():
     matricula_autor = session.get('matricula_autor')  # Recupera a matrícula do autor da sessão
@@ -172,25 +173,34 @@ def obras_autor():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
-    # Consulta SQL corrigida
+    # Consulta SQL ajustada para incluir o campo Valor da tabela Galeria
     query = """
-        SELECT oa.*
+        SELECT oa.*, 
+               (SELECT g.Valor FROM Galeria g WHERE g.ObraID = oa.ID LIMIT 1) AS Valor
         FROM ObraDeArte oa
         INNER JOIN Autor a ON oa.AutorID = a.PessoaID
         WHERE a.MatriculaAutor = %s;
     """
-    cursor.execute(query, (matricula_autor,))  # Corrigido: tupla
-    obras_de_arte = cursor.fetchall()  # Corrigido: usar cursor.fetchall()
+    cursor.execute(query, (matricula_autor,))
+    obras_de_arte = cursor.fetchall()
 
-    # Converte a imagem binária para Base64
+    # Converte os dados para o formato esperado pelo frontend
+    obras_formatadas = []
     for obra in obras_de_arte:
-        if obra['Imagem']:
-            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')
+        obra_formatada = {
+            "imagem": f"data:{obra['TipoArquivo']};base64,{base64.b64encode(obra['Imagem']).decode('utf-8')}" if obra['Imagem'] else 'caminho/para/imagem-padrao.jpg',
+            "nome": obra['Titulo'],
+            "informacoes": obra['Descricao'],
+            "valor": float(obra['Valor']) if obra['Valor'] is not None else None  # Adiciona o campo Valor
+        }
+        obras_formatadas.append(obra_formatada)
 
     cursor.close()
     conexao.close()
 
-    return jsonify(obras_de_arte)  # Retorna um array direto de obras
+    return jsonify(obras_formatadas)
+
+
 #=======================================================================================================
 
 

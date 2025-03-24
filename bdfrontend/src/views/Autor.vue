@@ -31,6 +31,9 @@ import ButtonSolicitarEditPubli from '../components/ButtonSolicitarEditPubli.vue
 import Footer from '../components/Footer.vue'
 import axios from 'axios'
 
+// Configura o Axios para enviar cookies
+axios.defaults.withCredentials = true;
+
 export default {
     name: 'Autor',
     data() {
@@ -40,7 +43,8 @@ export default {
                 Email: '',
             },
             ObrasAutor: [], // Armazena as obras do autor
-            valoresObras: [] // Armazena os valores das obras para o Dashboard
+            valoresObras: [], // Armazena os valores das obras para o Dashboard
+            loading: false // Controla o estado de carregamento
         }
     },
     components: {
@@ -51,39 +55,73 @@ export default {
         ButtonSolicitarEditPubli,
         Footer
     },
-    async mounted() {
-        try {
-            // Busca os dados do autor
-            const responseAutor = await axios.get('http://localhost:5000/autor-logado');
-            this.autor = responseAutor.data;
-
-            // Busca as obras do autor
-            await this.buscarObrasAutor();
-        } catch (error) {
-            console.error('Erro ao carregar dados:', error);
-            alert("Erro ao carregar dados. Tente novamente.");
-        }
-    },
     methods: {
-        async buscarObrasAutor() {
+        async buscarUsuarioLogado() {
             try {
-                console.log("Buscando as obras do autor...");
+                const response = await axios.get('http://localhost:5000/autor-logado');
+                this.autor = response.data;
+            } catch (error) {
+            alert("Erro ao buscar dados do autor. Tente novamente.");
+                this.$router.push('/LoginAutor');  // Redireciona para a página de login em caso de erro
+            }
+        },
+
+        async buscarObrasAutor() {
+            if (!this.autor) {
+                alert("Autor não autenticado.");
+                this.$router.push('/LoginAutor');  // Redireciona para a página de login
+                return;
+            }
+            
+            this.loading = true;
+            try {
+                // Busca as obras do autor
                 const response = await axios.get('http://localhost:5000/obras-autor');
-                this.ObrasAutor = response.data; // Atualiza as obras do autor
-                console.log("Obras do autor:", this.ObrasAutor);
+
+                if (response.data.length === 0) {
+                    alert("Nenhuma obra encontrada.");
+                    this.ObrasAutor = [];  
+                    // Define o array de obras como vazio
+                } else {
+                    this.ObrasAutor = response.data;
+                    console.log('Valores das obras:', response.data); 
+                }
 
                 // Extrai os valores das obras para o Dashboard
-                this.valoresObras = this.ObrasAutor.map(obra => obra.Valor);
-                console.log("Valores das obras:", this.valoresObras);
+                
+                this.valoresObras = this.ObrasAutor.map(obra => obra.valor);
+                 // Depuração
             } catch (error) {
                 console.error('Erro ao buscar obras do autor:', error);
-                alert("Erro ao carregar obras do autor. Tente novamente.");
+                if (error.response && error.response.status === 401) {
+                    alert("Autor não autenticado ou sessão expirada.");
+                    this.$router.push('/LoginAutor');  // Redireciona para a página de login
+                } else {
+                    alert("Erro ao carregar as obras.");
+                }
+            } finally {
+                this.loading = false;
             }
         }
+    },
+    async mounted() {
+        await this.buscarUsuarioLogado(); // Aguarda a conclusão da requisição
+        this.buscarObrasAutor(); // Agora chama o método para buscar obras
     }
 }
 </script>
 
-<style >
+<style>
 /* Estilos personalizados */
+.container {
+    margin-top: 2rem;
+}
+
+h1 {
+    margin-top: 4rem;
+}
+
+h2 {
+    margin-top: 2rem;
+}
 </style>
