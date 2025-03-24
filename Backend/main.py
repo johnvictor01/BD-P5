@@ -162,44 +162,35 @@ def autor_logado():
     return jsonify(usuario)
 
 #======================================
-
 @app.route('/obras-autor', methods=['GET'])
 def obras_autor():
-    print("Iniciando a função obras_autor")
-    matricula_autor = session.get('matricula_autor')  # Corrigido: usar matricula_autor
-
-    print("Matrícula do Autor na sessão:", matricula_autor)  # Depuração
+    matricula_autor = session.get('matricula_autor')  # Recupera a matrícula do autor da sessão
 
     if not matricula_autor:
         return jsonify({"erro": "Usuário não autenticado"}), 401
     
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM ObraDeArte WHERE AutorID = %s", (matricula_autor,))  # Corrigido: tupla
+
+    # Consulta SQL corrigida
+    query = """
+        SELECT oa.*
+        FROM ObraDeArte oa
+        INNER JOIN Autor a ON oa.AutorID = a.PessoaID
+        WHERE a.MatriculaAutor = %s;
+    """
+    cursor.execute(query, (matricula_autor,))  # Corrigido: tupla
     obras_de_arte = cursor.fetchall()  # Corrigido: usar cursor.fetchall()
 
-    colecao = {"colecao": []}
-
+    # Converte a imagem binária para Base64
     for obra in obras_de_arte:
-        colecao["colecao"].append({
-            "imagem": obra["Imagem"],
-            "tipo_arquivo": obra["TipoArquivo"],
-            "titulo": obra["Titulo"],
-            "descricao": obra["Descricao"],
-            "data_publicacao": obra["DataPublicacao"],
-            "estilo_arte": obra["EstiloArte"],
-            "pais_galeria": obra["PaisGaleria"],
-            "altura": obra["Altura"],
-            "largura": obra["Largura"],
-            "valor": obra["Valor"],
-            "status": obra["Status"]  # Adicionado status, se necessário
-        })
+        if obra['Imagem']:
+            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')
 
     cursor.close()
     conexao.close()
 
-    return jsonify(colecao)  
-
+    return jsonify(obras_de_arte)  # Retorna um array direto de obras
 #=======================================================================================================
 
 

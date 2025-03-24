@@ -67,16 +67,14 @@ export default {
     methods: {
         async buscarObrasAutor() {
             try {
-                console.log("Printando os autores")
+                console.log("Buscando as obras do autor...");
                 const response = await axios.get('http://localhost:5000/obras-autor');
                 this.ObrasAutor = response.data; // Atualiza as obras do autor
-                console.log("nao passei")
-                console.log(this.ObrasAutor)
-                console.log("Acima printei os autores")
-                
+                console.log("Obras do autor:", this.ObrasAutor);
 
                 // Extrai os valores das obras para o Dashboard
                 this.valoresObras = this.ObrasAutor.map(obra => obra.Valor);
+                console.log("Valores das obras:", this.valoresObras);
             } catch (error) {
                 console.error('Erro ao buscar obras do autor:', error);
                 alert("Erro ao carregar obras do autor. Tente novamente.");
@@ -87,5 +85,5 @@ export default {
 </script>
 
 <style >
-
+/* Estilos personalizados */
 </style>
