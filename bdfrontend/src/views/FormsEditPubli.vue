@@ -1,6 +1,8 @@
 <template>
     <div>
       <CabecalhoPessoa />
+      <h1>. <br>.</h1>
+      <h1>Edite sua Obra</h1>
         <form id="obra-form" @submit="submitForm">
           <div class="input-container">
             <label for="titulo">Título da Obra</label>
@@ -41,112 +43,72 @@
         obraId: null, // Armazena o ID da obra em edição
       };
     },
-    computed: {
-      // Verifica se há um ID na rota (modo de edição)
-      idDaRota() {
-        return this.$route.params.id || null;
-      }
-    },
-    watch: {
-      // Observa mudanças no ID da rota
-      idDaRota(newId) {
-        if (newId) {
-          this.isEditing = true;
-          this.obraId = newId;
-          this.carregarObraParaEdicao();
-        }
-      }
-    },
     mounted() {
-      // Verifica se há um ID na rota ao carregar o componente
-      if (this.idDaRota) {
-        this.isEditing = true;
-        this.obraId = this.idDaRota;
-        this.carregarObraParaEdicao();
+  // Verifica se há uma obra na rota ao carregar o componente
+  if (this.$route.params.obra) {
+    this.isEditing = true;
+    this.obra = this.$route.params.obra; // Armazena o objeto da obra
+    this.carregarObraParaEdicao();
+  }
+},
+watch: {
+  // Observa mudanças na obra da rota
+  '$route.params.obra': function(newObra) {
+    if (newObra) {
+      this.isEditing = true;
+      this.obra = newObra;
+      this.carregarObraParaEdicao();
+    }
+  }
+},
+
+   
+        
+methods: {
+  async submitForm(e) {
+    e.preventDefault();
+
+    const userId = localStorage.getItem("userId");
+
+    // Dados da obra
+    const obra = {
+      nome: this.titulo, // Use o campo 'nome' da obra
+      informacoes: this.descricao, // Use o campo 'informacoes' da obra
+      autor: userId,
+    };
+
+    try {
+      if (this.isEditing) {
+        // Modo de edição: atualiza a obra existente
+        obra.id = this.obra.id; // Usa o ID da obra original
+        const response = await axios.put('http://localhost:5000/edit-obra', obra);
+        console.log("Obra atualizada:", response.data);
+        this.msg = "Obra atualizada com sucesso!";
+      } else {
+        // Modo de criação: cria uma nova obra
+        const response = await axios.post("http://localhost:5000/obras", obra);
+        console.log("Nova obra criada:", response.data);
+        this.msg = "Obra publicada com sucesso!";
       }
-    },
-    methods: {
-      async login() {
-        // Simulação de um JSON fictício para teste
-        const usuariosFicticios = [
-          { id: 1, usuario: "admin", senha: "123456" },
-          { id: 2, usuario: "joao", senha: "senha123" },
-          { id: 3, usuario: "maria", senha: "maria456" }
-        ];
 
-        // Verifica se o usuário e senha correspondem
-        const usuarioEncontrado = usuariosFicticios.find(
-          (user) => user.usuario === this.usuario && user.senha === this.senha
-        );
+      this.msgvisible = true;
+      setTimeout(() => (this.msgvisible = false), 3000);
 
-        if (usuarioEncontrado) {
-          // Simula uma resposta de sucesso
-          localStorage.setItem("userId", usuarioEncontrado.id);
-          this.isLoggedIn = true;
-          this.msg = "Login bem-sucedido!";
-        } else {
-          // Simula uma resposta de erro
-          this.msg = "Usuário ou senha inválidos!";
-        }
+      // Limpa o formulário após o envio
+      this.titulo = "";
+      this.descricao = "";
 
-        this.msgvisible = true;
-        setTimeout(() => (this.msgvisible = false), 3000);
-      },
-
-      async carregarObraParaEdicao() {
-        // Simulação de uma requisição para carregar os dados da obra
-        const obrasFicticias = [
-          { id: 1, titulo: "Obra 1", descricao: "Descrição da Obra 1" },
-          { id: 2, titulo: "Obra 2", descricao: "Descrição da Obra 2" },
-          { id: 3, titulo: "Obra 3", descricao: "Descrição da Obra 3" }
-        ];
-
-        const obra = obrasFicticias.find(obra => obra.id === parseInt(this.obraId));
-        if (obra) {
-          this.titulo = obra.titulo;
-          this.descricao = obra.descricao;
-        } else {
-          this.msg = "Obra não encontrada!";
-          this.msgvisible = true;
-          setTimeout(() => (this.msgvisible = false), 3000);
-        }
-      },
-
-      async submitForm(e) {
-        e.preventDefault();
-
-        const userId = localStorage.getItem("userId");
-
-        // Dados da obra
-        const obra = {
-          titulo: this.titulo,
-          descricao: this.descricao,
-          autor: userId,
-        };
-
-        if (this.isEditing) {
-          // Modo de edição: atualiza a obra existente
-          obra.id = this.obraId;
-          console.log("Atualizando obra:", obra);
-          this.msg = "Obra atualizada com sucesso!";
-        } else {
-          // Modo de criação: cria uma nova obra
-          console.log("Criando nova obra:", obra);
-          this.msg = "Obra publicada com sucesso!";
-        }
-
-        this.msgvisible = true;
-        setTimeout(() => (this.msgvisible = false), 3000);
-
-        // Limpa o formulário após o envio
-        this.titulo = "";
-        this.descricao = "";
-
-        // Redireciona para a página /Autor
-        this.$router.push({ name: 'Autor' });
-      },
-    },
-  };
+      // Redireciona para a página /Autor
+      this.$router.push({ name: 'Autor' });
+    } catch (error) {
+      console.error("Erro ao salvar obra:", error);
+      this.msg = "Erro ao salvar a obra!";
+      this.msgvisible = true;
+      setTimeout(() => (this.msgvisible = false), 3000);
+    }
+  },
+},
+  }
   </script>
   
   <style>
