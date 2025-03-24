@@ -219,7 +219,7 @@ def inserir_obra():
     id_autor = cursor.fetchone()
     
     dados_para_salvar = {
-        "Image":imgblob
+        "Image":imgblob,
         "TipoArquivo":dados.get('tipoarquivo'),
         "Titulo":dados.get('titulo'),
         "Descricao":dados.get('descricao'),
@@ -230,7 +230,6 @@ def inserir_obra():
         "Altura":dados.get('altura'),
         "Largura":dados.get('Largura')
     }
-    
     
     query = "INSERT INTO ObraDeArte (ID, Imagem, TipoArquivo, Titulo, Descricao, DataPublicacao, EstiloArte, AutorID, PaisGaleria, Altura, Largura) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
     cursor.execute(query, (
@@ -256,7 +255,26 @@ def inserir_obra():
         return jsonify({"sucesso": "Imagem inserida com sucesso"}), 201
 
 
-        
+ @app.route('/remover-obra', methods=['POST'])
+def remvover_obra():
+    dados = request.get_json()
+    id_obra = dados.get('id_obra') #Procura Parametro corretor
+
+    conexao = conectar_banco()
+    cursor = conexaao.cursor(dictionary=True)
+    query = "DELETE FROM ObradeArte WHERE ID = %s"
+    cursor.execute(query, (id_obra))
+    resultado = cursor.fetchone()
+    cursor.close()
+    conexao.close()
+
+    if not resultado:
+        return jsonify({"erro": "Alguma coisa deu errado ao tentar delata a imagem"}), 401
+    else:
+        return jsonify({"sucesso": "Imagem Deletada com sucesso"}), 201
+
+
+    
 #=======================================================================================================
 #USUARIO AUTOR FIM
 
