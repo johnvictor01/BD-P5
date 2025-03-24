@@ -66,9 +66,14 @@ export default {
     },
     methods: {
         async buscarObrasAutor() {
-            try {a
+            try {
+                console.log("Printando os autores")
                 const response = await axios.get('http://localhost:5000/obras-autor');
                 this.ObrasAutor = response.data; // Atualiza as obras do autor
+                console.log("nao passei")
+                console.log(this.ObrasAutor)
+                console.log("Acima printei os autores")
+                
 
                 // Extrai os valores das obras para o Dashboard
                 this.valoresObras = this.ObrasAutor.map(obra => obra.Valor);

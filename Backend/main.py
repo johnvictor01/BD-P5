@@ -130,67 +130,76 @@ def verificar_autor():
         "CPF": resultado[5],
         "DataNascimento": resultado[6],
         "Email": resultado[7],
-        "Telefone": resultado[8]
+        "Telefone": resultado[8],
+        "MatriculaAutor": resultado[9]  # Adicionando a matrícula do autor na resposta
     }
 
     session['matricula_autor'] = resultado[9]  # Armazenando Matricula do Autor na Sessão
+    print("Matrícula do Autor armazenada na sessão:", session['matricula_autor'])  # Depuração
 
     return jsonify(pessoa)
 
+#==============================================================================================
 @app.route('/autor-logado', methods=['GET'])
 def autor_logado():
     matricula_autor = session.get('matricula_autor')  # Recupera a matrícula do autor da sessão
+
+    if not matricula_autor:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
     
+    print("Consegui logar")
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM Autor WHERE MatriculaAutor = %s", (matricula_autor,))  # Corrigido: tupla
+    usuario = cursor.fetchone()
+    print("Fechando a conexão")
+    cursor.close()
+    conexao.close()
+
+    if not usuario:
+        return jsonify({"erro": "Autor não encontrado"}), 404
+
+    return jsonify(usuario)
+
+#======================================
+
+@app.route('/obras-autor', methods=['GET'])
+def obras_autor():
+    print("Iniciando a função obras_autor")
+    matricula_autor = session.get('matricula_autor')  # Corrigido: usar matricula_autor
+
+    print("Matrícula do Autor na sessão:", matricula_autor)  # Depuração
+
     if not matricula_autor:
         return jsonify({"erro": "Usuário não autenticado"}), 401
     
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM Autor WHERE PessoaID = %s", (IdAutor))
-    usuario = cursor.fetchone()
+    cursor.execute("SELECT * FROM ObraDeArte WHERE AutorID = %s", (matricula_autor,))  # Corrigido: tupla
+    obras_de_arte = cursor.fetchall()  # Corrigido: usar cursor.fetchall()
+
+    colecao = {"colecao": []}
+
+    for obra in obras_de_arte:
+        colecao["colecao"].append({
+            "imagem": obra["Imagem"],
+            "tipo_arquivo": obra["TipoArquivo"],
+            "titulo": obra["Titulo"],
+            "descricao": obra["Descricao"],
+            "data_publicacao": obra["DataPublicacao"],
+            "estilo_arte": obra["EstiloArte"],
+            "pais_galeria": obra["PaisGaleria"],
+            "altura": obra["Altura"],
+            "largura": obra["Largura"],
+            "valor": obra["Valor"],
+            "status": obra["Status"]  # Adicionado status, se necessário
+        })
 
     cursor.close()
     conexao.close()
 
-    if not autor:
-        return jsonify({"erro": "Autor não encontrado"}), 404
+    return jsonify(colecao)  
 
-    return jsonify(usuario)
-
-@app.route('/obras-autor', methods=['GET'])
-def obras_autor():
-    IdAutor = session.get('IdAutor')
-
-    print("Id do Autor na sessão:", IdAutor) 
-
-    if not IdAutor:
-        return jsonify({"erro": "Usuário não autenticado"}), 401
-    
-    conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM ObradeArte WHERE AutorID = %s", (IdAutor))
-    obras_de_arte = curso.fetchall()
-    colecao = {"colecao":[]}
-
-    for obj in range(0, len(obras_de_arte)):
-        colecao["colecao"][obj] = {
-            "imagem": obras_de_arte[obj][1],
-            "tipo_arquivo": obras_de_arte[obj][2],
-            "titulo": obras_de_arte[obj][3],
-            "descricao": obras_de_arte[obj][4],
-            "data_publicacao": obras_de_arte[obj][5],
-            "estilo_arte": obras_de_arte[obj][6],
-            "pais_galeria":obras_de_arte[obj][7],
-            "altura": obras_de_arte[obj][8],
-            "largura": obras_de_arte[obj][9],
-            "valor": obras_de_arte[obj][10],
-            "status": obras_de_arte[obj][11] #Não sei se vai preicsar!
-        }
-
-    cursor.close()
-    conexao.close()
-
-    return jsonify(usuario)
 #=======================================================================================================
 
 
