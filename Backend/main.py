@@ -204,6 +204,57 @@ def obras_autor():
 
 #=======================================================================================================
 
+@app.route('/inserir-obra', methods=['POST'])
+def inserir_obra():
+    dados = request.get_json()
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    imgblob = dados.get('imagem')
+    imgblob = base64.b64encode(imgblob).decode('utf-8')
+
+    username =   dados.get('usuario')
+    query = "SELECT PessoaID FROM Autor WHERE NomeUsuario = %s"
+    cursor.execute(query, ())
+
+    id_autor = cursor.fetchone()
+    
+    dados_para_salvar = {
+        "Image":imgblob
+        "TipoArquivo":dados.get('tipoarquivo'),
+        "Titulo":dados.get('titulo'),
+        "Descricao":dados.get('descricao'),
+        "DataPublicacao":dados.get('dataPublicacao'),
+        "EstiloArte":dados.get('estiloArte'),
+        "AutorID":id_autor,
+        "PaisGaleria":dados.get('paisGaleria'),
+        "Altura":dados.get('altura'),
+        "Largura":dados.get('Largura')
+    }
+    
+    
+    query = "INSERT INTO ObraDeArte (ID, Imagem, TipoArquivo, Titulo, Descricao, DataPublicacao, EstiloArte, AutorID, PaisGaleria, Altura, Largura) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+    cursor.execute(query, (
+        dados_para_salvar["Image"],
+        dados_para_salvar["TipoArquivo"],
+        dados_para_salvar["Titulo"],
+        dados_para_salvar["Descricao"],
+        dados_para_salvar["DataPublicacao"],
+        dados_para_salvar["EstiloArte"],
+        dados_para_salvar["AutorID"],
+        dados_para_salvar["PaisGaleria"],
+        dados_para_salvar["Altura"],
+        dados_para_salvar["Largura"]
+    ))
+    resultado = cursor.fetchone()
+
+    cursor.close()
+    conexao.close()
+
+    if not resultado:
+        return jsonify({"erro": "Alguma coisa deu errado ao inserir a imagem"}), 401
+    else:
+        return jsonify({"sucesso": "Imagem inserida com sucesso"}), 201
 
 
         
