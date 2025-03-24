@@ -148,29 +148,33 @@ def verificar_autor():
     return jsonify(pessoa)
 
 
-
-
 @app.route('/autor-logado', methods=['GET'])
-def Autor_logado():
-    IdAutor = session.get('IdAutor')
-
-    print("Id do Autor na sessão:", IdAutor) 
-
-    if not IdAutor:
+def autor_logado():
+    matricula_autor = session.get('matricula_autor')  # Recupera a matrícula do autor da sessão
+    
+    if not matricula_autor:
         return jsonify({"erro": "Usuário não autenticado"}), 401
     
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM Autor WHERE PessoaID = %s", (IdAutor))
-    usuario = cursor.fetchone()
+
+    # Consulta SQL para buscar o autor e os dados da pessoa associada
+    query = """
+        SELECT p.Nome, p.Email, a.*
+        FROM Autor a
+        INNER JOIN Pessoa p ON a.PessoaID = p.ID
+        WHERE a.MatriculaAutor = %s
+    """
+    cursor.execute(query, (matricula_autor,))
+    autor = cursor.fetchone()
 
     cursor.close()
     conexao.close()
 
-    if not usuario:
-        return jsonify({"erro": "Usuário não encontrado"}), 404
+    if not autor:
+        return jsonify({"erro": "Autor não encontrado"}), 404
 
-    return jsonify(usuario)
+    return jsonify(autor)
 #=======================================================================================================
 
 
