@@ -334,6 +334,7 @@ def editar_obra():
 #Pergunta qual vai ser o iterador @
 @app.route('/obras-mais-caras', methods=['GET'])
 def retorna_obras_para_home():
+
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
@@ -348,7 +349,7 @@ def retorna_obras_para_home():
         ) g ON oa.ID = g.ObraID;
     """
 
-    cursor.execute(query_cliente, (nome_usuario, senha))
+    cursor.execute(query_cliente)
     resultado = cursor.fetchone()
 
     cursor.close()

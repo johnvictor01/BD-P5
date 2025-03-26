@@ -1,5 +1,7 @@
 <template>
   <div>
+    <h1>.</h1>
+    <h1>.</h1>
     <div v-if="carregando" class="carregando">Carregando obras...</div>
     
     <div v-else>
