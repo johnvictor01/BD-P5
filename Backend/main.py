@@ -7,6 +7,8 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)  # Permite credenciais (cookies)
 app.secret_key = 'sua_chave_secreta'
 
+
+#Conexão Do banco 
 def conectar_banco():
     return mysql.connector.connect(
         host="localhost",
@@ -17,9 +19,10 @@ def conectar_banco():
 
 
 #=======================================================================================================
-#USUÁRIO CLIENTE INICIO
+#Select 
 #=======================================================================================================
 
+#Verificação de Usuário
 @app.route('/verificar_usuario', methods=['POST'])
 def verificar_usuario():
     dados = request.get_json()
@@ -56,7 +59,7 @@ def verificar_usuario():
         "DataNascimento": resultado[6],
         "Email": resultado[7],
         "Telefone": resultado[8],
-        "IdDono": resultado[9]  # Usando IdDono em vez de MatriculaCliente
+        "IdDono": resultado[9]  
     }
 
     session['matricula_cliente'] = resultado[9]  # Armazenando IdDono na sessão
@@ -179,7 +182,7 @@ def obras_autor():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
-    # Consulta SQL ajustada para incluir o campo Valor da tabela Galeria
+ 
     query = """
         SELECT oa.*, 
                (SELECT g.Valor FROM Galeria g WHERE g.ObraID = oa.ID LIMIT 1) AS Valor
@@ -198,7 +201,7 @@ def obras_autor():
             "imagem": f"data:{obra['TipoArquivo']};base64,{base64.b64encode(obra['Imagem']).decode('utf-8')}" if obra['Imagem'] else 'caminho/para/imagem-padrao.jpg',
             "nome": obra['Titulo'],
             "informacoes": obra['Descricao'],
-            "valor": float(obra['Valor']) if obra['Valor'] is not None else None  # Adiciona o campo Valor
+            "valor": float(obra['Valor']) if obra['Valor'] is not None else None 
         }
         obras_formatadas.append(obra_formatada)
 
@@ -329,6 +332,8 @@ def editar_obra():
     except Exception as e:
         conexao.rollback()  # Desfaz alterações se houver erro
         return jsonify({"erro": f"Erro ao editar obra: {str(e)}"}), 500
+
+
 
 
 #Pergunta qual vai ser o iterador @

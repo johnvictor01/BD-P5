@@ -7,8 +7,6 @@ CREATE TABLE Pessoa (
     CPF VARCHAR(11) UNIQUE NOT NULL,
     DataNascimento DATE NOT NULL,
     Email VARCHAR(100) UNIQUE NOT NULL,
-    NomeUsuario VARCHAR(30) UNIQUE NOT NULL,
-    Senha VARCHAR(255) NOT NULL,
     Telefone VARCHAR(15)
 );
 
