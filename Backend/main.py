@@ -3,7 +3,7 @@ import secrets
 from decimal import Decimal
 import random
 import string
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, make_response, request, session
 import mysql.connector
 from flask_cors import CORS
 import base64
@@ -1034,7 +1034,7 @@ def gerar_relatorio_pdf():
             FROM 
             Cliente c JOIN Endereco e ON c.PessoaID = e.PessoaID
             JOIN Pessoa p ON c.PessoaID = p.ID
-            WHERE c.MatriculaCliente == %s
+            WHERE c.MatriculaCliente = %s
         """, (matricula_cliente,))
         cliente = cursor.fetchone()
 
