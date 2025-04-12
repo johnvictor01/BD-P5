@@ -3,7 +3,7 @@ import secrets
 from decimal import Decimal
 import random
 import string
-from flask import Flask, jsonify, make_response, request, session
+from flask import Flask, jsonify, request, session
 import mysql.connector
 from flask_cors import CORS
 import base64
@@ -1027,12 +1027,9 @@ def gerar_relatorio_pdf():
     try:
         # Buscar dados do cliente
         cursor.execute("""
-            SELECT 
-            p.Nome, p.Sobrenome, p.Email, p.Telefone,  p.CPF, 
-            c.MatriculaCliente, 
-            e.Rua,  e.Numero,  e.Bairro,  e.Cidade, e.Estado, e.CEP,  e.Pais
-            FROM 
-            Cliente c JOIN Endereco e ON c.PessoaID = e.PessoaID
+            SELECT p.Nome, p.Sobrenome, p.Email, p.Telefone, p.CPF,
+                   c.MatriculaCliente, c.DataCadastro
+            FROM Cliente c
             JOIN Pessoa p ON c.PessoaID = p.ID
             WHERE c.MatriculaCliente == %s
         """, (matricula_cliente,))
@@ -1102,11 +1099,6 @@ def gerar_relatorio_pdf():
             fontSize=10,
             leading=14
         )
-
-        # Cabeçalho
-        logo_path = "caminho/para/logo.png"  # Substitua pelo caminho real
-        logo = Image(logo_path, width=2*inch, height=1*inch)
-        elements.append(logo)
         
         elements.append(Spacer(1, 20))
         elements.append(Paragraph("RELATÓRIO DO CLIENTE", estilo_titulo))
@@ -1120,8 +1112,7 @@ def gerar_relatorio_pdf():
             ["Matrícula:", cliente['MatriculaCliente']],
             ["CPF:", cliente['CPF']],
             ["Email:", cliente['Email']],
-            ["Telefone:", cliente['Telefone']],
-            ["Data de Cadastro:", cliente['DataCadastro'].strftime('%d/%m/%Y')]
+            ["Telefone:", cliente['Telefone']]
         ]
         
         tbl = Table(data, colWidths=[100, 300])
@@ -1211,18 +1202,23 @@ def gerar_relatorio_pdf():
         doc.build(elements)
         
         buffer.seek(0)
+
         response = make_response(buffer.getvalue())
         response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename=relatorio_{matricula_cliente}.pdf'
-        
+        response.headers['Content-Disposition'] = 'attachment; filename=relatorio.pdf'
         return response
 
     except Exception as e:
-        print(f"Erro ao gerar PDF: {str(e)}")
-        return jsonify({"erro": "Falha ao gerar relatório PDF"}), 500
+        print(f"ERRO DETALHADO: {str(e)}")  # Log completo no terminal
+        import traceback
+        traceback.print_exc()  # Imprime stack trace completo
+        return jsonify({"erro": f"Falha ao gerar PDF: {str(e)}"}), 500
+
     finally:
         cursor.close()
         conexao.close()
+
+
 #=======================================================================================================
 # Operações de UPDATE 
 #=======================================================================================================
