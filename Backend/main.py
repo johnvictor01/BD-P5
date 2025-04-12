@@ -289,9 +289,6 @@ def autor_logado():
 
 
 
-
-
-
 @app.route('/dados-autor-logado', methods=['GET'])
 def dados_autor_logado():
     matricula_autor = session.get('matricula_autor')
@@ -352,9 +349,6 @@ def dados_autor_logado():
 
 
 
-
-
-
 # Listar Obras do Autor
 @app.route('/obras-autor', methods=['GET'])
 def obras_autor():
@@ -396,8 +390,6 @@ def obras_autor():
 
 
 
-
-
 # Pesquisar Obra por Titulo
 def PesquisarObraId(titulo, descricao, datapubli):
     conexao = conectar_banco()
@@ -415,11 +407,6 @@ def PesquisarObraId(titulo, descricao, datapubli):
     
     print("Executado com sucesso, id devolvido: ", obra)
     return obra
-
-
-
-
-
 
 
 # Retorna Obras mais caras
@@ -770,6 +757,9 @@ def dados_colaborador_logado():
     finally:
         cursor.close()
         conexao.close()
+
+
+
 
 
 #=======================================================================================================
