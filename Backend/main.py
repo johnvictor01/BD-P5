@@ -3,7 +3,7 @@ import secrets
 from decimal import Decimal
 import random
 import string
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, make_response, request, session
 import mysql.connector
 from flask_cors import CORS
 import base64
@@ -1027,11 +1027,14 @@ def gerar_relatorio_pdf():
     try:
         # Buscar dados do cliente
         cursor.execute("""
-            SELECT p.Nome, p.Sobrenome, p.Email, p.Telefone, p.CPF,
-                   c.MatriculaCliente, c.DataCadastro
-            FROM Cliente c
+            SELECT 
+            p.Nome, p.Sobrenome, p.Email, p.Telefone,  p.CPF, 
+            c.MatriculaCliente, 
+            e.Rua,  e.Numero,  e.Bairro,  e.Cidade, e.Estado, e.CEP,  e.Pais
+            FROM 
+            Cliente c JOIN Endereco e ON c.PessoaID = e.PessoaID
             JOIN Pessoa p ON c.PessoaID = p.ID
-            WHERE c.MatriculaCliente = %s
+            WHERE c.MatriculaCliente == %s
         """, (matricula_cliente,))
         cliente = cursor.fetchone()
 
@@ -1040,12 +1043,13 @@ def gerar_relatorio_pdf():
 
         # Buscar histórico de compras
         cursor.execute("""
-            SELECT v.ID, v.PedidoID, v.ValorTotal, v.DataVenda,
+          SELECT v.ID, v.PedidoID, v.ValorTotal, v.DataVenda,
                    pg.MetodoPagamento, pg.Situacao
             FROM Venda v
+            JOIN Cliente c on v.ClienteID = c.PessoaID
             JOIN Pagamento pg ON v.ID = pg.VendaID
-            WHERE v.ClienteID = %s
-            ORDER BY v.DataVenda DESC
+            where c.MatriculaCliente = %s
+            ORDER BY v.DataVenda DESC;
         """, (matricula_cliente,))
         compras = cursor.fetchall()
 
@@ -1054,9 +1058,11 @@ def gerar_relatorio_pdf():
             SELECT o.Titulo, p.Valor, v.DataVenda
             FROM Pedido p
             JOIN Venda v ON p.VendaID = v.ID
+            JOIN Cliente c on c.PessoaID = v.ClienteID
             JOIN ObraDeArte o ON p.ObraID = o.ID
-            WHERE v.ClienteID = %s
-            ORDER BY v.DataVenda DESC
+            WHERE c.MatriculaCliente = %s
+            ORDER BY v.DataVenda DESC;
+            
         """, (matricula_cliente,))
         obras = cursor.fetchall()
 
@@ -1303,9 +1309,6 @@ def liberar_obra():
     finally:
         cursor.close()
         conexao.close()
-
-
-
 
 
 @app.route('/autorizar-venda', methods=['POST'])
