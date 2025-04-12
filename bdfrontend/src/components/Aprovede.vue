@@ -12,26 +12,41 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 
-const isSpinning = ref(true)
+const props = defineProps({
+  show: Boolean
+})
+
+const isSpinning = ref(false)
 const isFilled = ref(false)
 
-onMounted(() => {
+watch(() => props.show, (newVal) => {
+  console.log('Prop show mudou:', newVal) // 👈 teste aqui
+  if (newVal) {
+    startAnimation()
+  }
+})
+
+const startAnimation = () => {
+  isSpinning.value = true
+  isFilled.value = false
+  
   setTimeout(() => {
     isSpinning.value = false
     isFilled.value = true
-  }, 4000) // tempo em milissegundos antes de mostrar "aprovado"
-})
+  }, 1500)
+}
 </script>
 
 <style scoped>
 .backdrop {
   position: fixed;
-  top: 0; left: 0;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.5); /* fundo escuro com leve transparência */
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;

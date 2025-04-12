@@ -1,6 +1,6 @@
 <template>
     <div>
-      <CabecalhoPessoa />
+      <CabecalhoPessoa :tipoUsuario="2"/>
       <h1>.</h1>
       <div class="container">
         <div class="row">

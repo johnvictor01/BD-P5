@@ -1,6 +1,6 @@
 <template>
   <div>
-    <CabecalhoPessoa />
+    <CabecalhoPessoa :tipoUsuario="1" />
     <br>
     <br />
     <p>_</p>
@@ -112,8 +112,8 @@ export default {
     }
   },
   async mounted() {
-    await this.buscarUsuarioLogado(); // Aguarda a conclusão da requisição
-    this.buscarObrasDisponiveis(); // Agora chama o método para buscar obras
+    await this.buscarUsuarioLogado(); 
+    this.buscarObrasDisponiveis(); 
   }
 };
 </script>
