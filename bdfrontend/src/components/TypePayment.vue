@@ -45,80 +45,105 @@
   </template>
   
   <script>
-  import CabecalhoPessoa from '../components/CabecalhoPessoa.vue';
-  import Message from '../components/Message.vue';
-  
-  export default {
-    name: 'TypePayment',
-    components: {
-      CabecalhoPessoa,
-      Message,
+import axios from 'axios';
+import CabecalhoPessoa from '../components/CabecalhoPessoa.vue';
+import Message from '../components/Message.vue';
+
+// Configuração global do Axios
+const api = axios.create({
+  baseURL: 'http://localhost:5000',
+  withCredentials: true,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
+});
+
+export default {
+  name: 'TypePayment',
+  components: {
+    CabecalhoPessoa,
+    Message,
+  },
+  data() {
+    return {
+      selectedPayment: null,
+      message: '',
+      messageVisible: false,
+      isProcessing: false
+    };
+  },
+  methods: {
+    selectPayment(metodo) {
+      this.selectedPayment = metodo;
     },
-    data() {
-      return {
-        selectedPayment: null, // Armazena o método de pagamento selecionado
-        message: '', // Mensagem a ser exibida
-        messageVisible: false, // Controla a visibilidade da mensagem
-      };
-    },
 
-    methods: {
-      // Seleciona o método de pagamento
-      selectPayment(metodo) {
-        this.selectedPayment = metodo;
-      },
-  
-      // Redireciona para a próxima etapa de pagamento
-      async continuarPagamento() {
-    if (!this.selectedPayment) {
-      this.message = 'Selecione um método de pagamento.';
-      this.messageVisible = true;
-      setTimeout(() => this.messageVisible = false, 3000);
-      return;
-    }
-
-    try {
-      const response = await axios.post('http://localhost:5000/finalizar-compra', {
-        metodo_pagamento: this.selectedPayment
-      }, { withCredentials: true });
-
-      if (response.data.sucesso) {
-        // Mensagens personalizadas para cada método
-        const messages = {
-          'cartao': 'Pagamento no cartão aprovado!',
-          'pix': 'Pagamento via PIX aprovado!',
-          'boleto': 'Boleto gerado com sucesso!'
-        };
-        
-        this.message = messages[this.selectedPayment];
-        this.messageVisible = true;
-
-        // Redirecionar após 3 segundos
-        setTimeout(() => {
-          this.$router.push({ 
-            name: 'Client',
-            query: { venda_id: response.data.venda_id }
-          });
-        }, 3000);
+    async continuarPagamento() {
+      if (this.isProcessing) return;
+      
+      if (!this.selectedPayment) {
+        this.showMessage('Selecione um método de pagamento.');
+        return;
       }
-    } catch (error) {
-      console.error('Erro ao finalizar compra:', error);
-      this.message = error.response?.data?.erro || 'Erro ao processar pagamento';
-      this.messageVisible = true;
-      setTimeout(() => this.messageVisible = false, 3000);
-    }
-  
-        setTimeout(() => {
-          this.messageVisible = false;
-            this.$router.push({ name: 'Client' });
-        }, 3000);
 
-      },
+      this.isProcessing = true;
+      this.showMessage('Processando seu pagamento...');
+
+      try {
+        const response = await api.post('/finalizar-compra', {
+          metodo_pagamento: this.selectedPayment
+        });
+
+        if (response.data.sucesso) {
+          const successMessages = {
+            'cartao': 'Pagamento no cartão aprovado! Redirecionando...',
+            'pix': 'Pagamento via PIX aprovado! Redirecionando...',
+            'boleto': 'Boleto gerado com sucesso! Redirecionando...'
+          };
+          
+          this.showMessage(successMessages[this.selectedPayment]);
+          
+          setTimeout(() => {
+            this.$router.push({ 
+              name: 'Client',
+              query: { 
+                venda_id: response.data.venda_id,
+                success: 'true'
+              }
+            });
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Erro detalhado:', error);
+        
+        let errorMessage = 'Erro ao processar pagamento';
+        if (error.response) {
+          if (error.response.status === 401) {
+            errorMessage = 'Sessão expirada. Faça login novamente.';
+            setTimeout(() => this.$router.push('/login'), 2000);
+          } else if (error.response.data?.erro) {
+            errorMessage = error.response.data.erro;
+          }
+        }
+        
+        this.showMessage(errorMessage);
+      } finally {
+        this.isProcessing = false;
+      }
     },
-  };
-  
-  </script>
-  
+
+    showMessage(msg) {
+      this.message = msg;
+      this.messageVisible = true;
+      setTimeout(() => {
+        this.messageVisible = false;
+      }, 5000);
+    }
+  }
+};
+</script>
+
   <style>
   .payment-container {
     max-width: 800px;

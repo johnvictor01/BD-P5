@@ -1,4 +1,5 @@
-import datetime
+from datetime import datetime
+import secrets
 from decimal import Decimal
 import random
 import string
@@ -6,6 +7,7 @@ from flask import Flask, jsonify, request, session
 import mysql.connector
 from flask_cors import CORS
 import base64
+
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)  # Permite credenciais (cookies)
@@ -649,91 +651,118 @@ def salvar_carrinho():
 
 @app.route('/finalizar-compra', methods=['POST'])
 def finalizar_compra():
-    usuario_id = session.get('matricula_cliente')
-    if not usuario_id:
-        return jsonify({"erro": "Usuário não autenticado"}), 401
-    
-    data = request.json
-    metodo_pagamento = data.get('metodo_pagamento')
-    
-    if not metodo_pagamento or metodo_pagamento not in ['cartao', 'pix', 'boleto']:
-        return jsonify({"erro": "Método de pagamento inválido"}), 400
-
-    conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
-
     try:
-        # 1. Recuperar itens do carrinho
-        cursor.execute("""
-            SELECT o.ID, g.valor 
-            FROM ObraDeArte o
-            JOIN carrinhos c ON o.ID = c.ObraID
-            LEFT JOIN galeria g ON o.ID = g.ObraID
-            WHERE c.usuario_id = %s AND g.valor IS NOT NULL
-        """, (usuario_id,))
-        itens = cursor.fetchall()
+        # Verifica autenticação
+        matricula_cliente = session.get('matricula_cliente')
+        if not matricula_cliente:
+            return jsonify({"erro": "Usuário não autenticado"}), 401
+        
+        # Valida método de pagamento
+        data = request.get_json()
+        if not data:
+            return jsonify({"erro": "Dados inválidos"}), 400
+            
+        metodo_pagamento = data.get('metodo_pagamento')
+        if not metodo_pagamento or metodo_pagamento not in ['cartao', 'pix', 'boleto']:
+            return jsonify({"erro": "Método de pagamento inválido"}), 400
 
-        if not itens:
-            return jsonify({"erro": "Carrinho vazio ou itens indisponíveis"}), 400
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
 
-        # 2. Calcular valor total
-        valor_total = sum(float(item['valor']) for item in itens)
-
-        # 3. Gerar PedidoID único (ex: PED-20240412-ABC123)
-        data_atual = datetime.now().strftime('%Y%m%d')
-        random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        pedido_id = f"PED-{data_atual}-{random_str}"
-
-        # 4. Inserir na tabela Venda
-        cursor.execute("""
-            INSERT INTO Venda (ClienteID, PedidoID, ValorTotal, DataVenda)
-            VALUES (%s, %s, %s, CURDATE())
-        """, (usuario_id, pedido_id, valor_total))
-        venda_id = cursor.lastrowid
-
-        # 5. Inserir itens na tabela Pedido
-        for item in itens:
+        try:
+            # 1. Obtém o PessoaID correspondente à MatriculaCliente
             cursor.execute("""
-                INSERT INTO Pedido (VendaID, ObraID, Valor)
-                VALUES (%s, %s, %s)
-            """, (venda_id, item['ID'], item['valor']))
+                SELECT PessoaID 
+                FROM Cliente 
+                WHERE MatriculaCliente = %s
+            """, (matricula_cliente,))
+            cliente = cursor.fetchone()
+            
+            if not cliente:
+                return jsonify({"erro": "Usuário não encontrado"}), 404
+                
+            pessoa_id = cliente['PessoaID']
 
-        # 6. Inserir na tabela Pagamento
-        situacao = 2  # Aprovado (1 seria "pendente")
-        cursor.execute("""
-            INSERT INTO Pagamento (VendaID, ValorTotalPago, MetodoPagamento, Situacao)
-            VALUES (%s, %s, %s, %s)
-        """, (venda_id, valor_total, metodo_pagamento, situacao))
-
-        # 7. Adicionar obras à galeria pessoal do usuário
-        for item in itens:
+            # 2. Recupera itens do carrinho com estoque disponível
             cursor.execute("""
-                UPDATE galeria
-                SET status = 2, IdDono = %s
-                WHERE ObraID = %s
-            """, (usuario_id, item['ID']))
+                SELECT o.ID, g.valor 
+                FROM ObraDeArte o
+                JOIN carrinhos c ON o.ID = c.ObraID
+                JOIN galeria g ON o.ID = g.ObraID
+                WHERE c.usuario_id = %s AND g.valor IS NOT NULL AND g.status = 1
+                FOR UPDATE
+            """, (matricula_cliente,))
+            itens = cursor.fetchall()
 
-        # 8. Limpar carrinho
-        cursor.execute("DELETE FROM carrinhos WHERE usuario_id = %s", (usuario_id,))
+            if not itens:
+                return jsonify({"erro": "Carrinho vazio ou itens indisponíveis"}), 400
 
-        conexao.commit()
+            # 3. Calcula valor total
+            valor_total = sum(float(item['valor']) for item in itens)
 
-        return jsonify({
-            "sucesso": "Compra finalizada com sucesso",
-            "pedido_id": pedido_id,
-            "venda_id": venda_id
-        }), 200
+            # 4. Gera ID único para o pedido
+            pedido_id = f"PED-{datetime.now().strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
+
+            # 5. Inicia transação
+            cursor.execute("START TRANSACTION")
+
+            # 6. Insere venda usando PessoaID como ClienteID
+            cursor.execute("""
+                INSERT INTO Venda (ClienteID, PedidoID, ValorTotal, DataVenda)
+                VALUES (%s, %s, %s, NOW())
+            """, (pessoa_id, pedido_id, valor_total))
+            venda_id = cursor.lastrowid
+
+            # 7. Insere itens do pedido
+            for item in itens:
+                cursor.execute("""
+                    INSERT INTO Pedido (VendaID, ObraID, Valor)
+                    VALUES (%s, %s, %s)
+                """, (venda_id, item['ID'], item['valor']))
+
+            # 8. Insere pagamento
+            situacao = 1 if metodo_pagamento == 'boleto' else 2  # 1 = pendente, 2 = aprovado
+            cursor.execute("""
+                INSERT INTO Pagamento (VendaID, ValorTotalPago, MetodoPagamento, Situacao)
+                VALUES (%s, %s, %s, %s)
+            """, (venda_id, valor_total, metodo_pagamento, situacao))
+
+            # 9. Atualiza status das obras usando MatriculaCliente
+            for item in itens:
+                cursor.execute("""
+                    UPDATE galeria
+                    SET status = 0, IdDono = %s
+                    WHERE ObraID = %s AND status = 1
+                """, (matricula_cliente, item['ID']))
+
+            # 10. Limpa carrinho
+            cursor.execute("DELETE FROM carrinhos WHERE usuario_id = %s", (matricula_cliente,))
+
+            # Confirma transação
+            conexao.commit()
+
+            return jsonify({
+                "sucesso": True,
+                "mensagem": "Compra finalizada com sucesso",
+                "pedido_id": pedido_id,
+                "venda_id": venda_id
+            }), 200
+
+        except Exception as e:
+            conexao.rollback()
+            app.logger.error(f"Erro ao finalizar compra: {str(e)}")
+            return jsonify({
+                "erro": "Erro interno ao processar pagamento",
+                "detalhes": str(e)
+            }), 500
+
+        finally:
+            cursor.close()
+            conexao.close()
 
     except Exception as e:
-        conexao.rollback()
-        print(f"Erro ao finalizar compra: {str(e)}")
-        return jsonify({"erro": "Falha ao processar pagamento"}), 500
-
-    finally:
-        cursor.close()
-        conexao.close()
-
-
+        app.logger.error(f"Erro geral: {str(e)}")
+        return jsonify({"erro": "Erro interno no servidor"}), 500
 #=======================================================================================================
 # Operações de UPDATE 
 #=======================================================================================================
