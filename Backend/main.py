@@ -977,7 +977,7 @@ def finalizar_compra():
             for item in itens:
                 cursor.execute("""
                     UPDATE galeria
-                    SET status = 2, IdDono = %s
+                    SET status = 3, IdDono = %s
                     WHERE ObraID = %s AND status = 1
                 """, (matricula_cliente, item['ID']))
 
@@ -987,7 +987,8 @@ def finalizar_compra():
             # Confirma transação
             conexao.commit()
 
-            
+            cursor.callproc('AtualizarQuantidadeObrasCompradas', [matricula_cliente])
+            conexao.commit()
 
             return jsonify({
                 "sucesso": True,
