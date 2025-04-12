@@ -503,7 +503,7 @@ def recuperar_carrinho():
     JOIN carrinhos c ON o.ID = c.ObraID
     LEFT JOIN galeria g ON o.ID = g.ObraID
     WHERE c.usuario_id = %s
-""", (usuario_id,))
+    """, (usuario_id,))
     
     itens = cursor.fetchall()
 
@@ -647,9 +647,6 @@ def salvar_carrinho():
     return jsonify({"sucesso": "Carrinho salvo com sucesso"}), 201
 
 
-
-
-
 @app.route('/finalizar-compra', methods=['POST'])
 def finalizar_compra():
     usuario_id = session.get('matricula_cliente')
@@ -711,9 +708,9 @@ def finalizar_compra():
         # 7. Adicionar obras à galeria pessoal do usuário
         for item in itens:
             cursor.execute("""
-                INSERT INTO GaleriaPessoal (UsuarioID, ObraID, DataAdquisicao)
-                VALUES (%s, %s, CURDATE())
-                ON DUPLICATE KEY UPDATE DataAdquisicao = CURDATE()
+                UPDATE galeria
+                SET status = 2, IdDono = %s
+                WHERE ObraID = %s
             """, (usuario_id, item['ID']))
 
         # 8. Limpar carrinho
@@ -736,7 +733,7 @@ def finalizar_compra():
         cursor.close()
         conexao.close()
 
-#
+
 #=======================================================================================================
 # Operações de UPDATE 
 #=======================================================================================================
