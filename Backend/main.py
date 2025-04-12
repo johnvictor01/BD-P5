@@ -75,12 +75,71 @@ def verificar_usuario():
     return jsonify(pessoa)
 
 
+@app.route('/dados-usuario-logado', methods=['GET'])
+def dados_cliente_logado():
+    matricula_cliente = session.get('matricula_cliente')
+
+    if not matricula_cliente:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+    
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        # Consulta completa com dados de Pessoa, Cliente e Endereco
+        query = """
+        SELECT 
+            p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento,
+            p.Email, p.Telefone,
+            e.Rua, e.Numero, e.Bairro, e.Cidade, e.Estado, e.CEP, e.Pais,
+            c.MatriculaCliente
+        FROM Cliente c
+        JOIN Pessoa p ON c.PessoaID = p.ID
+        LEFT JOIN Endereco e ON e.PessoaID = p.ID
+        WHERE c.MatriculaCliente = %s
+        """
+        cursor.execute(query, (matricula_cliente,))
+        dados = cursor.fetchone()
+
+        if not dados:
+            return jsonify({"erro": "Dados não encontrados"}), 404
+
+        # Formatação dos dados
+        resposta = {
+            "id": dados['ID'],
+            "nome_completo": f"{dados['Nome']} {dados['Sobrenome']}",
+            "cpf": dados['CPF'],
+            "data_nascimento": dados['DataNascimento'],
+            "email": dados['Email'],
+            "telefone": dados['Telefone'],
+            "endereco": {
+                "rua": dados.get("Rua"),
+                "numero": dados.get("Numero"),
+                "bairro": dados.get("Bairro"),
+                "cidade": dados.get("Cidade"),
+                "estado": dados.get("Estado"),
+                "cep": dados.get("CEP"),
+                "pais": dados.get("Pais")
+            },
+            "matricula": dados['MatriculaCliente']
+        }
+        print(resposta)
+
+        return jsonify(resposta)
+
+    except Exception as e:
+        print(f"Erro ao buscar dados: {str(e)}")
+        return jsonify({"erro": "Erro interno"}), 500
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+
 # Usuário Logado
 @app.route('/usuario-logado', methods=['GET'])
 def usuario_logado():
     matricula_cliente = session.get('matricula_cliente')
-
-    print("Matrícula do cliente na sessão:", matricula_cliente) 
 
     if not matricula_cliente:
         return jsonify({"erro": "Usuário não autenticado"}), 401
@@ -98,6 +157,62 @@ def usuario_logado():
         return jsonify({"erro": "Usuário não encontrado"}), 404
 
     return jsonify(usuario)
+
+
+
+
+@app.route('/recuperar-carrinho', methods=['GET'])
+def recuperar_carrinho():
+    usuario_id = session.get('matricula_cliente')
+    
+    if not usuario_id:
+        return jsonify({"erro": "Usuário não especificado"}), 400
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    # Busca informações sem a imagem (ou converte a imagem para base64 se necessário)
+    cursor.execute("""
+    SELECT 
+        o.ID,
+        o.Titulo,
+        o.Descricao,
+        o.DataPublicacao,
+        o.EstiloArte,
+        o.AutorID,  # Mantém apenas o ID se não precisar do nome
+        o.PaisGaleria,
+        o.Altura,
+        o.Largura,
+        g.valor
+    FROM ObraDeArte o
+    JOIN carrinhos c ON o.ID = c.ObraID
+    LEFT JOIN galeria g ON o.ID = g.ObraID
+    WHERE c.usuario_id = %s
+    """, (usuario_id,))
+    
+    itens = cursor.fetchall()
+
+    cursor.close()
+    conexao.close()
+
+    # Converter Decimal para float e tratar outros campos
+    for item in itens:
+        if 'valor' in item and isinstance(item['valor'], Decimal):
+            item['valor'] = float(item['valor'])
+        
+        # Converter campos de data para string
+        if 'DataPublicacao' in item and item['DataPublicacao']:
+            item['DataPublicacao'] = item['DataPublicacao'].isoformat()
+
+    return jsonify({
+        "sucesso": "Carrinho recuperado com sucesso",
+        "itens": itens
+    }), 200
+
+
+#============
+# AUTOR
+#============
 
 
 # Verificação de Autor
@@ -147,10 +262,10 @@ def verificar_autor():
     return jsonify(pessoa)
 
 
-# Autor Logado
+
 @app.route('/autor-logado', methods=['GET'])
 def autor_logado():
-    
+    print("Pegando a matrocula do cliente")
     matricula_autor = session.get('matricula_autor')  # Recupera a matrícula do autor da sessão
     print(matricula_autor)
     if not matricula_autor:
@@ -170,6 +285,74 @@ def autor_logado():
         return jsonify({"erro": "Autor não encontrado"}), 404
 
     return jsonify(usuario)
+
+
+
+
+
+
+
+@app.route('/dados-autor-logado', methods=['GET'])
+def dados_autor_logado():
+    matricula_autor = session.get('matricula_autor')
+
+    if not matricula_autor:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+    
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        query = """
+        SELECT 
+            p.ID, p.Nome, p.Sobrenome, p.CPF, 
+            DATE_FORMAT(p.DataNascimento, '%%d/%%m/%%Y') as DataNascimento,
+            p.Email, p.Telefone,
+            e.Rua, e.Numero, e.Bairro, e.Cidade, e.Estado, e.CEP, e.Pais,
+            a.MatriculaAutor
+        FROM Autor a
+        JOIN Pessoa p ON a.PessoaID = p.ID
+        LEFT JOIN Endereco e ON e.PessoaID = p.ID
+        WHERE a.MatriculaAutor = %s
+        """
+        cursor.execute(query, (matricula_autor,))
+        dados = cursor.fetchone()
+        
+        if not dados:
+            return jsonify({"erro": "Dados não encontrados"}), 404
+
+        # Formatação dos dados
+        resposta = {
+            "id": dados['ID'],
+            "nome_completo": f"{dados['Nome']} {dados['Sobrenome']}",
+            "cpf": dados['CPF'],
+            "data_nascimento": dados['DataNascimento'],
+            "email": dados['Email'],
+            "telefone": dados['Telefone'],
+            "endereco": {
+                "rua": dados['Rua'],
+                "numero": dados['Numero'],
+                "bairro": dados['Bairro'],
+                "cidade": dados['Cidade'],
+                "estado": dados['Estado'],
+                "cep": dados['CEP'],
+                "pais": dados['Pais']
+            },
+            "matricula": dados['MatriculaAutor']  # Corrigido para MatriculaAutor
+        }
+
+        return jsonify(resposta)
+
+    except Exception as e:
+        print(f"Erro ao buscar dados: {str(e)}")
+        return jsonify({"erro": "Erro interno"}), 500
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+
+
 
 
 # Listar Obras do Autor
@@ -212,6 +395,9 @@ def obras_autor():
     return jsonify(obras_formatadas)
 
 
+
+
+
 # Pesquisar Obra por Titulo
 def PesquisarObraId(titulo, descricao, datapubli):
     conexao = conectar_banco()
@@ -229,6 +415,11 @@ def PesquisarObraId(titulo, descricao, datapubli):
     
     print("Executado com sucesso, id devolvido: ", obra)
     return obra
+
+
+
+
+
 
 
 # Retorna Obras mais caras
@@ -411,7 +602,18 @@ def listar_obras_pendentes_vendas():
     
     return jsonify(obras)
 
-# Veriicar Colaborador
+
+
+
+#===============
+#COLABORADOR
+#+==============
+
+
+
+
+
+# Verificar Colaborador
 @app.route('/verificar-colaborador', methods=['POST'])
 def verificar_colaborador():
     dados = request.get_json()
@@ -426,7 +628,7 @@ def verificar_colaborador():
 
     query = """
     SELECT c.NomeUsuario, c.Senha, p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento, p.Email, p.Telefone,
-    c.Cargo, c.DataContratacao, c.Salario
+    c.Cargo, c.DataContratacao, c.Salario, c.NomeUsuario
     FROM Funcionario c
     INNER JOIN Pessoa p ON c.PessoaID = p.ID
     WHERE c.NomeUsuario = %s AND c.Senha = %s
@@ -453,16 +655,16 @@ def verificar_colaborador():
         "DataContratacao": resultado[10],
         "Salario": resultado[10],
     }
-
-    session['nome_colaborador'] = resultado[0]  # Armazenando Nome do Colaborador na sessão
-
+ 
+    session['nome_colaborador'] = nome_usuario # Armazenando Nome do Colaborador na sessão
+    print(session['nome_colaborador'])
     return jsonify(pessoa)
 
 
 # Lista Obras para serem aprovadas para liberação
 @app.route('/obras-disponiveis', methods=['GET'])
 def obras_disponiveis():
-    matricula_cliente = session.get('matricula_cliente')
+    matricula_cliente = session.get('nome_colaborador')
 
     if not matricula_cliente:
         return jsonify({"erro": "Não autorizado"}), 401
@@ -510,53 +712,65 @@ def obras_disponiveis():
     return jsonify(obras)
 
 
-@app.route('/recuperar-carrinho', methods=['GET'])
-def recuperar_carrinho():
-    usuario_id = session.get('matricula_cliente')
-    
-    if not usuario_id:
-        return jsonify({"erro": "Usuário não especificado"}), 400
 
+@app.route('/dados-funcionario-logado', methods=['GET'])
+def dados_colaborador_logado():
+    print("Pegando a matricula do colaborador")
+    matricula_colaborador = session.get('nome_colaborador')  # Recupera a matrícula do colaborador da sessão
+    print(matricula_colaborador)
+
+    if not matricula_colaborador:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+    
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
-    # Busca informações sem a imagem (ou converte a imagem para base64 se necessário)
-    cursor.execute("""
-    SELECT 
-        o.ID,
-        o.Titulo,
-        o.Descricao,
-        o.DataPublicacao,
-        o.EstiloArte,
-        o.AutorID,  # Mantém apenas o ID se não precisar do nome
-        o.PaisGaleria,
-        o.Altura,
-        o.Largura,
-        g.valor
-    FROM ObraDeArte o
-    JOIN carrinhos c ON o.ID = c.ObraID
-    LEFT JOIN galeria g ON o.ID = g.ObraID
-    WHERE c.usuario_id = %s
-    """, (usuario_id,))
-    
-    itens = cursor.fetchall()
-
-    cursor.close()
-    conexao.close()
-
-    # Converter Decimal para float e tratar outros campos
-    for item in itens:
-        if 'valor' in item and isinstance(item['valor'], Decimal):
-            item['valor'] = float(item['valor'])
+    try:
+        query = """
+        SELECT 
+            p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento,
+            p.Email, p.Telefone,
+            e.Rua, e.Numero, e.Bairro, e.Cidade, e.Estado, e.CEP, e.Pais,
+            f.ID
+        FROM funcionario f
+        JOIN Pessoa p ON f.PessoaID = p.ID
+        LEFT JOIN Endereco e ON e.PessoaID = p.ID
+        WHERE f.NomeUsuario = %s;
+        """
+        cursor.execute(query, (matricula_colaborador,))
+        dados = cursor.fetchone()
         
-        # Converter campos de data para string
-        if 'DataPublicacao' in item and item['DataPublicacao']:
-            item['DataPublicacao'] = item['DataPublicacao'].isoformat()
+        if not dados:
+            return jsonify({"erro": "Dados não encontrados"}), 404
 
-    return jsonify({
-        "sucesso": "Carrinho recuperado com sucesso",
-        "itens": itens
-    }), 200
+        # Formatação dos dados
+        resposta = {
+            "id": dados['ID'],
+            "nome_completo": f"{dados['Nome']} {dados['Sobrenome']}",
+            "cpf": dados['CPF'],
+            "data_nascimento": dados['DataNascimento'],
+            "email": dados['Email'],
+            "telefone": dados['Telefone'],
+            "endereco": {
+                "rua": dados['Rua'],
+                "numero": dados['Numero'],
+                "bairro": dados['Bairro'],
+                "cidade": dados['Cidade'],
+                "estado": dados['Estado'],
+                "cep": dados['CEP'],
+                "pais": dados['Pais']
+            }, # Corrigido para MatriculaAutor
+        }
+
+        return jsonify(resposta)
+
+    except Exception as e:
+        print(f"Erro ao buscar dados: {str(e)}")
+        return jsonify({"erro": "Erro interno"}), 500
+    finally:
+        cursor.close()
+        conexao.close()
+
 
 #=======================================================================================================
 # Operações de INSERT

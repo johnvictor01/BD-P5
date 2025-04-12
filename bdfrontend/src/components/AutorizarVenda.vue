@@ -1,11 +1,11 @@
 <template>
   <div>
     <div v-if="carregando" class="carregando">Carregando obras...</div>
-        <!-- Popup de aprovação -->
-        <div v-if="mostrarPopup" class="popup-overlay">
-      <Aprovede />
-            </div>
-    <div v-else>
+    
+    <!-- Popup de aprovação com backdrop -->
+    <Aprovede v-show="mostrarPopup" :show="mostrarPopup" />
+
+    <div class="content">
       <div class="imagens-container">
         <div v-for="(obra, index) in obras" :key="index" class="imagem-card">
           <img
@@ -40,7 +40,6 @@ export default {
     const carregando = ref(true);
     const mostrarPopup = ref(false);
 
-
     const carregarObrasPendentes = async () => {
       try {
         const response = await axios.get(
@@ -70,13 +69,14 @@ export default {
           setTimeout(() => {
             mostrarPopup.value = false;
             carregarObrasPendentes();
-          }, 5000); // tempo para mostrar a animação do círculo
+          }, 2000);
         }
       } catch (error) {
         console.error("Erro ao autorizar venda:", error);
         alert(error.response?.data?.erro || "Erro ao autorizar venda");
       }
     };
+
     onMounted(() => {
       carregarObrasPendentes();
     });
@@ -85,14 +85,14 @@ export default {
       obras,
       carregando,
       liberarObra,
-      
+      mostrarPopup
     };
   },
 };
 </script>
 
 <style>
-/* Seus estilos permanecem os mesmos */
+/* Estilos existentes */
 .carregando {
   text-align: center;
   padding: 20px;
@@ -153,5 +153,37 @@ export default {
 
 .btn-autorizar:hover {
   background-color: #45a049;
+}
+
+/* Novos estilos para o popup */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Fundo escuro com transparência */
+  backdrop-filter: blur(5px); /* Efeito de desfoque */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.popup-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Garante que o conteúdo principal fique desfocado quando o popup estiver aberto */
+.content {
+  filter: blur(0);
+  transition: filter 0.3s ease;
+}
+
+.popup-overlay + .content {
+  filter: blur(5px);
 }
 </style>

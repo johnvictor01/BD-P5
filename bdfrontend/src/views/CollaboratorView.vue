@@ -1,6 +1,6 @@
 <template>
     <div>
-        <CabecalhoPessoa/>
+        <CabecalhoPessoa :tipoUsuario="3" />
         <br>
         <h1>Obras Esperando Autorização</h1>
         <AutorizarObras/>
