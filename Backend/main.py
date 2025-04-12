@@ -36,6 +36,7 @@ def verificar_usuario():
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
+    #Verifica e retorna os dados do usuario
     query_cliente = """
     SELECT c.NomeUsuario, c.Senha, p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento, p.Email, p.Telefone, c.MatriculaCliente
     FROM Cliente c
@@ -80,6 +81,7 @@ def usuario_logado():
     
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
+    #verifica Se o usuario na sessão logado existe ou se é lixo
     cursor.execute("SELECT * FROM Cliente WHERE MatriculaCliente = %s", (matricula_cliente,))
     usuario = cursor.fetchone()
 
@@ -105,6 +107,7 @@ def verificar_autor():
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
+    # Analoga a anterior
     query_autor = """
     SELECT c.NomeUsuario, c.Senha, p.ID, p.Nome, p.Sobrenome, p.CPF, p.DataNascimento, p.Email, p.Telefone, c.MatriculaAutor
     FROM Autor c
@@ -150,6 +153,7 @@ def autor_logado():
     print("Consegui logar")
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
+    #analoga a anterior
     cursor.execute("SELECT * FROM Autor WHERE MatriculaAutor = %s", (matricula_autor,))  # Corrigido: tupla
     usuario = cursor.fetchone()
     print("Fechando a conexão")
@@ -173,7 +177,7 @@ def obras_autor():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
- 
+    #Retorna as obras que pertencem ao autor
     query = """
         SELECT oa.*, 
                (SELECT g.Valor FROM Galeria g WHERE g.ObraID = oa.ID LIMIT 1) AS Valor
@@ -207,6 +211,7 @@ def PesquisarObraId(titulo, descricao, datapubli):
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
     print("Dados passados:", titulo,descricao,datapubli)
+
     query = """SELECT id FROM obradearte 
         WHERE Titulo = %s AND Descricao = %s AND DataPublicacao = %s LIMIT 1;
     """
