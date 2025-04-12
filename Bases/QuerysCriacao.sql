@@ -83,12 +83,10 @@ CREATE TABLE Galeria (
 CREATE TABLE Venda (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     ClienteID INT NOT NULL,
-    FuncionarioID INT NOT NULL,
     PedidoID VARCHAR(20) UNIQUE NOT NULL,
     ValorTotal DECIMAL(10,2) NOT NULL,
     DataVenda DATE NOT NULL,
     FOREIGN KEY (ClienteID) REFERENCES Cliente(PessoaID),
-    FOREIGN KEY (FuncionarioID) REFERENCES Funcionario(ID)
 );
 
 CREATE TABLE Pedido (

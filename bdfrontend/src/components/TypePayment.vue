@@ -61,6 +61,7 @@
         messageVisible: false, // Controla a visibilidade da mensagem
       };
     },
+
     methods: {
       // Seleciona o método de pagamento
       selectPayment(metodo) {
@@ -68,28 +69,44 @@
       },
   
       // Redireciona para a próxima etapa de pagamento
-      continuarPagamento() {
-        if (!this.selectedPayment) {
-          alert('Selecione um método de pagamento.');
-          return;
-        }
-  
-        switch (this.selectedPayment) {
-          case 'cartao':
-            this.message = 'Pagamento no cartão do Vasco aprovado';
-            this.messageVisible = true;
-            break;
-          case 'pix':
-            this.message = 'Pagamento no Pix do Vasco aprovado';
-            this.messageVisible = true;
-            break;
-          case 'boleto':
-            this.message = 'Pagamento no Boleto Fiado do Flamengo aprovado';
-            this.messageVisible = true;
-            break;
-          default:
-            break;
-        }
+      async continuarPagamento() {
+    if (!this.selectedPayment) {
+      this.message = 'Selecione um método de pagamento.';
+      this.messageVisible = true;
+      setTimeout(() => this.messageVisible = false, 3000);
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:5000/finalizar-compra', {
+        metodo_pagamento: this.selectedPayment
+      }, { withCredentials: true });
+
+      if (response.data.sucesso) {
+        // Mensagens personalizadas para cada método
+        const messages = {
+          'cartao': 'Pagamento no cartão aprovado!',
+          'pix': 'Pagamento via PIX aprovado!',
+          'boleto': 'Boleto gerado com sucesso!'
+        };
+        
+        this.message = messages[this.selectedPayment];
+        this.messageVisible = true;
+
+        // Redirecionar após 3 segundos
+        setTimeout(() => {
+          this.$router.push({ 
+            name: 'Client',
+            query: { venda_id: response.data.venda_id }
+          });
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Erro ao finalizar compra:', error);
+      this.message = error.response?.data?.erro || 'Erro ao processar pagamento';
+      this.messageVisible = true;
+      setTimeout(() => this.messageVisible = false, 3000);
+    }
   
         setTimeout(() => {
           this.messageVisible = false;
@@ -99,6 +116,7 @@
       },
     },
   };
+  
   </script>
   
   <style>

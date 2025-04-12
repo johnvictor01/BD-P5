@@ -1,3 +1,7 @@
+import datetime
+from decimal import Decimal
+import random
+import string
 from flask import Flask, jsonify, request, session
 import mysql.connector
 from flask_cors import CORS
@@ -482,24 +486,38 @@ def recuperar_carrinho():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
-    # Verifica se o usuário existe
-    #cursor.execute("SELECT MatriculaCliente FROM Cliente WHERE MatriculaCliente = %s", (usuario_id,))
-    #if not cursor.fetchone():
-    #    return jsonify({"erro": "Usuário não encontrado"}), 404
-
-    # Busca todas as obras no carrinho do usuário com informações completas
+    # Busca informações sem a imagem (ou converte a imagem para base64 se necessário)
     cursor.execute("""
-        SELECT o.*, g.valor 
-        FROM ObraDeArte o
-        JOIN carrinhos c ON o.ID = c.ObraID
-        LEFT JOIN galeria g ON o.ID = g.ObraID
-        WHERE c.usuario_id = %s
-    """, (usuario_id,))
+    SELECT 
+        o.ID,
+        o.Titulo,
+        o.Descricao,
+        o.DataPublicacao,
+        o.EstiloArte,
+        o.AutorID,  # Mantém apenas o ID se não precisar do nome
+        o.PaisGaleria,
+        o.Altura,
+        o.Largura,
+        g.valor
+    FROM ObraDeArte o
+    JOIN carrinhos c ON o.ID = c.ObraID
+    LEFT JOIN galeria g ON o.ID = g.ObraID
+    WHERE c.usuario_id = %s
+""", (usuario_id,))
     
     itens = cursor.fetchall()
 
     cursor.close()
     conexao.close()
+
+    # Converter Decimal para float e tratar outros campos
+    for item in itens:
+        if 'valor' in item and isinstance(item['valor'], Decimal):
+            item['valor'] = float(item['valor'])
+        
+        # Converter campos de data para string
+        if 'DataPublicacao' in item and item['DataPublicacao']:
+            item['DataPublicacao'] = item['DataPublicacao'].isoformat()
 
     return jsonify({
         "sucesso": "Carrinho recuperado com sucesso",
@@ -627,6 +645,96 @@ def salvar_carrinho():
     conexao.close()
 
     return jsonify({"sucesso": "Carrinho salvo com sucesso"}), 201
+
+
+
+
+
+@app.route('/finalizar-compra', methods=['POST'])
+def finalizar_compra():
+    usuario_id = session.get('matricula_cliente')
+    if not usuario_id:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+    
+    data = request.json
+    metodo_pagamento = data.get('metodo_pagamento')
+    
+    if not metodo_pagamento or metodo_pagamento not in ['cartao', 'pix', 'boleto']:
+        return jsonify({"erro": "Método de pagamento inválido"}), 400
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        # 1. Recuperar itens do carrinho
+        cursor.execute("""
+            SELECT o.ID, g.valor 
+            FROM ObraDeArte o
+            JOIN carrinhos c ON o.ID = c.ObraID
+            LEFT JOIN galeria g ON o.ID = g.ObraID
+            WHERE c.usuario_id = %s AND g.valor IS NOT NULL
+        """, (usuario_id,))
+        itens = cursor.fetchall()
+
+        if not itens:
+            return jsonify({"erro": "Carrinho vazio ou itens indisponíveis"}), 400
+
+        # 2. Calcular valor total
+        valor_total = sum(float(item['valor']) for item in itens)
+
+        # 3. Gerar PedidoID único (ex: PED-20240412-ABC123)
+        data_atual = datetime.now().strftime('%Y%m%d')
+        random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        pedido_id = f"PED-{data_atual}-{random_str}"
+
+        # 4. Inserir na tabela Venda
+        cursor.execute("""
+            INSERT INTO Venda (ClienteID, PedidoID, ValorTotal, DataVenda)
+            VALUES (%s, %s, %s, CURDATE())
+        """, (usuario_id, pedido_id, valor_total))
+        venda_id = cursor.lastrowid
+
+        # 5. Inserir itens na tabela Pedido
+        for item in itens:
+            cursor.execute("""
+                INSERT INTO Pedido (VendaID, ObraID, Valor)
+                VALUES (%s, %s, %s)
+            """, (venda_id, item['ID'], item['valor']))
+
+        # 6. Inserir na tabela Pagamento
+        situacao = 2  # Aprovado (1 seria "pendente")
+        cursor.execute("""
+            INSERT INTO Pagamento (VendaID, ValorTotalPago, MetodoPagamento, Situacao)
+            VALUES (%s, %s, %s, %s)
+        """, (venda_id, valor_total, metodo_pagamento, situacao))
+
+        # 7. Adicionar obras à galeria pessoal do usuário
+        for item in itens:
+            cursor.execute("""
+                INSERT INTO GaleriaPessoal (UsuarioID, ObraID, DataAdquisicao)
+                VALUES (%s, %s, CURDATE())
+                ON DUPLICATE KEY UPDATE DataAdquisicao = CURDATE()
+            """, (usuario_id, item['ID']))
+
+        # 8. Limpar carrinho
+        cursor.execute("DELETE FROM carrinhos WHERE usuario_id = %s", (usuario_id,))
+
+        conexao.commit()
+
+        return jsonify({
+            "sucesso": "Compra finalizada com sucesso",
+            "pedido_id": pedido_id,
+            "venda_id": venda_id
+        }), 200
+
+    except Exception as e:
+        conexao.rollback()
+        print(f"Erro ao finalizar compra: {str(e)}")
+        return jsonify({"erro": "Falha ao processar pagamento"}), 500
+
+    finally:
+        cursor.close()
+        conexao.close()
 
 #
 #=======================================================================================================
