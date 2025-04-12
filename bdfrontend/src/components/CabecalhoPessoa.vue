@@ -164,17 +164,42 @@ export default {
       return `${rua}, ${numero} – ${bairro}, ${cidade} - ${estado}, ${cep}, ${pais}`;
     };
 
-    const baixarDados = () => {
-      const blob = new Blob([JSON.stringify(usuario.value, null, 2)], {
-        type: "application/json",
-      });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `historico_compras_${props.tipoUsuario}.json`;
-      document.body.appendChild(link);
-      link.click();
+    const baixarDados = async () => {
+        try {
+        // Use a URL completa se frontend e backend estão em portas diferentes
+        const response = await fetch('http://localhost:5000/relatorio-cliente-pdf', {
+          method: 'GET',
+          credentials: 'include', // Importante para cookies/session
+          headers: {
+          'Accept': 'application/pdf' // Informa que esperamos um PDF
+          }
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(error || "Erro ao baixar PDF");
+        }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `historico_${props.tipoUsuario}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    
+    // Limpeza
+    setTimeout(() => {
       document.body.removeChild(link);
-    };
+      URL.revokeObjectURL(url);
+    }, 100);
+
+  } catch (error) {
+    console.error("Erro:", error);
+    alert(error.message || "Falha ao baixar o histórico.");
+  }
+};
 
     const baixarDadosVendas = () => {
       const blob = new Blob([JSON.stringify(usuario.value, null, 2)], {
