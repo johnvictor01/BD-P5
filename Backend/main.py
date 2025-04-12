@@ -7,6 +7,13 @@ from flask import Flask, jsonify, request, session
 import mysql.connector
 from flask_cors import CORS
 import base64
+#
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
 
 
 app = Flask(__name__)
@@ -78,6 +85,8 @@ def verificar_usuario():
 @app.route('/dados-usuario-logado', methods=['GET'])
 def dados_cliente_logado():
     matricula_cliente = session.get('matricula_cliente')
+
+    #print("1 -- matricula do cliente: ",matricula_cliente)
 
     if not matricula_cliente:
         return jsonify({"erro": "Usuário não autenticado"}), 401
@@ -157,7 +166,6 @@ def usuario_logado():
         return jsonify({"erro": "Usuário não encontrado"}), 404
 
     return jsonify(usuario)
-
 
 
 
@@ -651,7 +659,9 @@ def verificar_colaborador():
 # Lista Obras para serem aprovadas para liberação
 @app.route('/obras-disponiveis', methods=['GET'])
 def obras_disponiveis():
-    matricula_cliente = session.get('nome_colaborador')
+    matricula_cliente = session.get('matricula_cliente')
+
+    print(matricula_cliente)
 
     if not matricula_cliente:
         return jsonify({"erro": "Não autorizado"}), 401
@@ -1003,6 +1013,210 @@ def finalizar_compra():
         app.logger.error(f"Erro geral: {str(e)}")
         return jsonify({"erro": "Erro interno no servidor"}), 500
 
+
+@app.route('/relatorio-cliente-pdf', methods=['GET'])
+def gerar_relatorio_pdf():
+    matricula_cliente = session.get('matricula_cliente')
+    
+    if not matricula_cliente:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        # Buscar dados do cliente
+        cursor.execute("""
+            SELECT p.Nome, p.Sobrenome, p.Email, p.Telefone, p.CPF,
+                   c.MatriculaCliente, c.DataCadastro
+            FROM Cliente c
+            JOIN Pessoa p ON c.PessoaID = p.ID
+            WHERE c.MatriculaCliente = %s
+        """, (matricula_cliente,))
+        cliente = cursor.fetchone()
+
+        if not cliente:
+            return jsonify({"erro": "Cliente não encontrado"}), 404
+
+        # Buscar histórico de compras
+        cursor.execute("""
+            SELECT v.ID, v.PedidoID, v.ValorTotal, v.DataVenda,
+                   pg.MetodoPagamento, pg.Situacao
+            FROM Venda v
+            JOIN Pagamento pg ON v.ID = pg.VendaID
+            WHERE v.ClienteID = %s
+            ORDER BY v.DataVenda DESC
+        """, (matricula_cliente,))
+        compras = cursor.fetchall()
+
+        # Buscar obras adquiridas
+        cursor.execute("""
+            SELECT o.Titulo, p.Valor, v.DataVenda
+            FROM Pedido p
+            JOIN Venda v ON p.VendaID = v.ID
+            JOIN ObraDeArte o ON p.ObraID = o.ID
+            WHERE v.ClienteID = %s
+            ORDER BY v.DataVenda DESC
+        """, (matricula_cliente,))
+        obras = cursor.fetchall()
+
+        # Calcular total gasto
+        total_gasto = sum(compra['ValorTotal'] for compra in compras)
+
+        # Criar PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter,
+                               rightMargin=72, leftMargin=72,
+                               topMargin=72, bottomMargin=72)
+        
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Estilo personalizado
+        estilo_titulo = ParagraphStyle(
+            'titulo',
+            parent=styles['Heading1'],
+            fontSize=18,
+            alignment=1,  # 0=Left, 1=Center, 2=Right
+            spaceAfter=20,
+            textColor=colors.HexColor('#2c3e50')
+        )
+        
+        estilo_subtitulo = ParagraphStyle(
+            'subtitulo',
+            parent=styles['Heading2'],
+            fontSize=12,
+            textColor=colors.HexColor('#7f8c8d'),
+            spaceAfter=10
+        )
+        
+        estilo_texto = ParagraphStyle(
+            'texto',
+            parent=styles['BodyText'],
+            fontSize=10,
+            leading=14
+        )
+
+        # Cabeçalho
+        logo_path = "caminho/para/logo.png"  # Substitua pelo caminho real
+        logo = Image(logo_path, width=2*inch, height=1*inch)
+        elements.append(logo)
+        
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("RELATÓRIO DO CLIENTE", estilo_titulo))
+        elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", estilo_subtitulo))
+        elements.append(Spacer(1, 30))
+        
+        # Seção 1: Dados Pessoais
+        elements.append(Paragraph("DADOS PESSOAIS", styles['Heading2']))
+        data = [
+            ["Nome:", f"{cliente['Nome']} {cliente['Sobrenome']}"],
+            ["Matrícula:", cliente['MatriculaCliente']],
+            ["CPF:", cliente['CPF']],
+            ["Email:", cliente['Email']],
+            ["Telefone:", cliente['Telefone']],
+            ["Data de Cadastro:", cliente['DataCadastro'].strftime('%d/%m/%Y')]
+        ]
+        
+        tbl = Table(data, colWidths=[100, 300])
+        tbl.setStyle(TableStyle([
+            ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+            ('FONTSIZE', (0,0), (-1,-1), 10),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TEXTCOLOR', (0,0), (0,-1), colors.HexColor('#7f8c8d')),
+            ('TEXTCOLOR', (1,0), (1,-1), colors.black),
+        ]))
+        
+        elements.append(tbl)
+        elements.append(Spacer(1, 30))
+        
+        # Seção 2: Histórico de Compras
+        elements.append(Paragraph("HISTÓRICO DE COMPRAS", styles['Heading2']))
+        
+        data_compras = [["Pedido", "Data", "Valor (R$)", "Pagamento", "Status"]]
+        for compra in compras:
+            data_compras.append([
+                compra['PedidoID'],
+                compra['DataVenda'].strftime('%d/%m/%Y'),
+                f"{compra['ValorTotal']:.2f}",
+                compra['MetodoPagamento'].capitalize(),
+                'Aprovado' if compra['Situacao'] == 2 else 'Pendente'
+            ])
+        
+        tbl_compras = Table(data_compras, colWidths=[120, 80, 80, 100, 60])
+        tbl_compras.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#3498db')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 10),
+            ('BOTTOMPADDING', (0,0), (-1,0), 12),
+            ('BACKGROUND', (0,1), (-1,-1), colors.white),
+            ('GRID', (0,0), (-1,-1), 1, colors.HexColor('#e0e0e0')),
+            ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
+            ('FONTSIZE', (0,1), (-1,-1), 9),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        
+        elements.append(tbl_compras)
+        elements.append(Spacer(1, 30))
+        
+        # Seção 3: Obras Adquiridas
+        elements.append(Paragraph("OBRAS ADQUIRIDAS", styles['Heading2']))
+        
+        data_obras = [["Obra", "Valor (R$)", "Data da Compra"]]
+        for obra in obras:
+            data_obras.append([
+                obra['Titulo'],
+                f"{obra['Valor']:.2f}",
+                obra['DataVenda'].strftime('%d/%m/%Y')
+            ])
+        
+        tbl_obras = Table(data_obras, colWidths=[300, 80, 80])
+        tbl_obras.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2ecc71')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('ALIGN', (1,1), (-1,-1), 'RIGHT'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 10),
+            ('BOTTOMPADDING', (0,0), (-1,0), 12),
+            ('BACKGROUND', (0,1), (-1,-1), colors.white),
+            ('GRID', (0,0), (-1,-1), 1, colors.HexColor('#e0e0e0')),
+            ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
+            ('FONTSIZE', (0,1), (-1,-1), 9),
+        ]))
+        
+        elements.append(tbl_obras)
+        elements.append(Spacer(1, 30))
+        
+        # Rodapé com total
+        elements.append(Paragraph(f"TOTAL GASTO: R$ {total_gasto:.2f}", 
+                                ParagraphStyle(
+                                    'total',
+                                    parent=styles['Heading2'],
+                                    fontSize=12,
+                                    alignment=2,
+                                    textColor=colors.HexColor('#e74c3c')
+                                )))
+        
+        # Gerar PDF
+        doc.build(elements)
+        
+        buffer.seek(0)
+        response = make_response(buffer.getvalue())
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=relatorio_{matricula_cliente}.pdf'
+        
+        return response
+
+    except Exception as e:
+        print(f"Erro ao gerar PDF: {str(e)}")
+        return jsonify({"erro": "Falha ao gerar relatório PDF"}), 500
+    finally:
+        cursor.close()
+        conexao.close()
 #=======================================================================================================
 # Operações de UPDATE 
 #=======================================================================================================
