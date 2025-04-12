@@ -471,6 +471,41 @@ def obras_disponiveis():
 
     return jsonify(obras)
 
+
+@app.route('/recuperar-carrinho', methods=['GET'])
+def recuperar_carrinho():
+    usuario_id = session.get('matricula_cliente')
+    
+    if not usuario_id:
+        return jsonify({"erro": "Usuário não especificado"}), 400
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    # Verifica se o usuário existe
+    #cursor.execute("SELECT MatriculaCliente FROM Cliente WHERE MatriculaCliente = %s", (usuario_id,))
+    #if not cursor.fetchone():
+    #    return jsonify({"erro": "Usuário não encontrado"}), 404
+
+    # Busca todas as obras no carrinho do usuário com informações completas
+    cursor.execute("""
+        SELECT o.*, g.valor 
+        FROM ObraDeArte o
+        JOIN carrinhos c ON o.ID = c.ObraID
+        LEFT JOIN galeria g ON o.ID = g.ObraID
+        WHERE c.usuario_id = %s
+    """, (usuario_id,))
+    
+    itens = cursor.fetchall()
+
+    cursor.close()
+    conexao.close()
+
+    return jsonify({
+        "sucesso": "Carrinho recuperado com sucesso",
+        "itens": itens
+    }), 200
+
 #=======================================================================================================
 # Operações de INSERT
 #=======================================================================================================
@@ -548,6 +583,52 @@ def inserir_obra():
     return jsonify({"sucesso": "Obra inserida com sucesso"}), 201
 
 
+@app.route('/salvar-carrinho', methods=['POST'])
+def salvar_carrinho():
+    dados = request.get_json()
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    usuario_id = session.get('matricula_cliente')
+    itens = dados.get('itens', [])
+
+    print(itens)
+
+    if not usuario_id:
+        return jsonify({"erro": "Usuário não especificado"}), 400
+
+
+    # Verifica se o usuário existe
+    #cursor.execute("SELECT MatriculaCliente FROM Cliente WHERE MatriculaCliente = %s", (usuario_id,))
+    #if not cursor.fetchone():
+    #    return jsonify({"erro": "Usuário não encontrado"}), 404
+
+    # Limpa o carrinho atual do usuário
+    cursor.execute("DELETE FROM carrinhos WHERE usuario_id = %s", (usuario_id,))
+
+    # Insere cada item no carrinho
+    for item in itens:
+        obra_id = item.get('ObraID')
+        if not obra_id:
+            continue
+
+        # Verifica se a obra existe
+        cursor.execute("SELECT ID FROM ObraDeArte WHERE ID = %s", (obra_id,))
+        if not cursor.fetchone():
+            continue
+
+        cursor.execute(
+            "INSERT INTO carrinhos (usuario_id, ObraID) VALUES (%s, %s)",
+            (usuario_id, obra_id)
+        )
+
+    conexao.commit()
+    cursor.close()
+    conexao.close()
+
+    return jsonify({"sucesso": "Carrinho salvo com sucesso"}), 201
+
+#
 #=======================================================================================================
 # Operações de UPDATE 
 #=======================================================================================================

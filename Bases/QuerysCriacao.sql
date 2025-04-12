@@ -109,3 +109,10 @@ CREATE TABLE Pagamento (
     FOREIGN KEY (VendaID) REFERENCES Venda(ID)
 );
 
+CREATE TABLE carrinhos (
+    usuario_id VARCHAR(15) NOT NULL,
+    ObraID INT NOT NULL,
+    FOREIGN KEY (usuario_id) REFERENCES Cliente(MatriculaCliente),
+    FOREIGN KEY (ObraID) REFERENCES ObraDeArte(ID)
+);
+

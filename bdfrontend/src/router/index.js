@@ -82,6 +82,15 @@ const routes = [
     // which is lazy-loaded when the route is visited.
     component: () => import(/* webpackChunkName: "about" */ '../views/LoginColaborator.vue')
   },
+
+  {
+    path: '/Pagamento',
+    name: 'Pagamento',
+    // route level code-splitting
+    // this generates a separate chunk (about.[hash].js) for this route
+    // which is lazy-loaded when the route is visited.
+    component: () => import(/* webpackChunkName: "about" */ '../views/Pagamento.vue')
+  },
   
 ]
 
