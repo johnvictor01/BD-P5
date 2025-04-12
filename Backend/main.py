@@ -763,7 +763,7 @@ def finalizar_compra():
             for item in itens:
                 cursor.execute("""
                     UPDATE galeria
-                    SET status = 3, IdDono = %s
+                    SET status = 2, IdDono = %s
                     WHERE ObraID = %s AND status = 1
                 """, (matricula_cliente, item['ID']))
 
@@ -772,6 +772,8 @@ def finalizar_compra():
 
             # Confirma transação
             conexao.commit()
+
+            
 
             return jsonify({
                 "sucesso": True,
@@ -795,6 +797,7 @@ def finalizar_compra():
     except Exception as e:
         app.logger.error(f"Erro geral: {str(e)}")
         return jsonify({"erro": "Erro interno no servidor"}), 500
+
 #=======================================================================================================
 # Operações de UPDATE 
 #=======================================================================================================
