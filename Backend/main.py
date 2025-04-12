@@ -1027,9 +1027,12 @@ def gerar_relatorio_pdf():
     try:
         # Buscar dados do cliente
         cursor.execute("""
-            SELECT p.Nome, p.Sobrenome, p.Email, p.Telefone, p.CPF,
-                   c.MatriculaCliente, c.DataCadastro
-            FROM Cliente c
+           SELECT 
+            p.Nome, p.Sobrenome, p.Email, p.Telefone,  p.CPF, 
+            c.MatriculaCliente, 
+            e.Rua,  e.Numero,  e.Bairro,  e.Cidade, e.Estado, e.CEP,  e.Pais
+            FROM 
+            Cliente c JOIN Endereco e ON c.PessoaID = e.PessoaID
             JOIN Pessoa p ON c.PessoaID = p.ID
             WHERE c.MatriculaCliente == %s
         """, (matricula_cliente,))
@@ -1040,7 +1043,7 @@ def gerar_relatorio_pdf():
 
         # Buscar histórico de compras
         cursor.execute("""
-          SELECT v.ID, v.PedidoID, v.ValorTotal, v.DataVenda,
+            SELECT v.ID, v.PedidoID, v.ValorTotal, v.DataVenda,
                    pg.MetodoPagamento, pg.Situacao
             FROM Venda v
             JOIN Cliente c on v.ClienteID = c.PessoaID
