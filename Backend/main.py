@@ -378,6 +378,38 @@ def listar_obras_pendentes():
     
     return jsonify(obras)
 
+# Endpoint para listar obras pendentes (status = 2)
+@app.route('/obras-pendentes-vendas', methods=['GET'])
+def listar_obras_pendentes_vendas():
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    
+    query = """
+        SELECT o.id, o.Titulo AS nome, o.Descricao AS informacoes, 
+               o.Imagem, o.TipoArquivo,  -- Adicionado TipoArquivo
+               p.Nome AS autor, o.DataPublicacao, o.EstiloArte AS estilo,
+               o.PaisGaleria, o.Altura, o.Largura, g.valor
+        FROM ObraDeArte o
+        JOIN Autor a ON o.AutorID = a.PessoaID
+        JOIN Pessoa p ON a.PessoaID = p.ID
+        JOIN Galeria g ON o.id = g.ObraID
+        WHERE g.status = 3
+    """
+    
+    cursor.execute(query)
+    obras = cursor.fetchall()
+    
+    # Converter a imagem binária para base64
+    for obra in obras:
+        if obra['Imagem'] is not None:
+            obra['Imagem'] = base64.b64encode(obra['Imagem']).decode('utf-8')
+        else:
+            obra['Imagem'] = None
+    
+    cursor.close()
+    conexao.close()
+    
+    return jsonify(obras)
 
 # Veriicar Colaborador
 @app.route('/verificar-colaborador', methods=['POST'])
@@ -731,7 +763,7 @@ def finalizar_compra():
             for item in itens:
                 cursor.execute("""
                     UPDATE galeria
-                    SET status = 0, IdDono = %s
+                    SET status = 3, IdDono = %s
                     WHERE ObraID = %s AND status = 1
                 """, (matricula_cliente, item['ID']))
 
@@ -849,6 +881,62 @@ def liberar_obra():
     finally:
         cursor.close()
         conexao.close()
+
+
+
+
+
+@app.route('/autorizar-venda', methods=['POST'])
+def autorizar_venda():
+    dados = request.get_json()
+    
+    # Validações básicas
+    if not dados or 'id_obra' not in dados:
+        return jsonify({"erro": "ID da obra é obrigatório"}), 400
+   
+  
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    try:
+        # 1. Verifica se a obra existe e está pendente
+        cursor.execute("""
+            SELECT status FROM galeria 
+            WHERE ObraID = %s
+        """, (dados['id_obra'],))
+        obra = cursor.fetchone()
+        
+        print("Obra encontrada")
+        if not obra:
+            return jsonify({"erro": "Obra não encontrada na galeria"}), 404
+        
+        # 2. Atualiza o status para 0 
+        print(dados['id_obra'])
+        cursor.execute("""
+            UPDATE galeria 
+            SET status = '0'
+            WHERE ObraID = %s
+        """, (dados['id_obra'],))
+        
+        print("Depois de executar na galeria")
+        conexao.commit()
+        print("Obra autorizada com sucesso")
+        return jsonify({
+            "sucesso": "Venda autorizada com sucesso",
+            "detalhes": {
+                "id_obra": dados['id_obra'],
+                "novo_status": 0,
+            }
+        }), 200
+        
+    except Exception as e:
+        conexao.rollback()
+        print(f"Erro ao autorizar venda: {str(e)}")
+        return jsonify({"erro": "Falha ao autorizar venda"}), 500
+    finally:
+        cursor.close()
+        conexao.close()
+
 
 
 #=======================================================================================================

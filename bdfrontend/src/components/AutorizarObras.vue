@@ -1,7 +1,6 @@
 <template>
   <div>
-    <h1>.</h1>
-    <h1>.</h1>
+    
     <div v-if="carregando" class="carregando">Carregando obras...</div>
     
     <div v-else>
@@ -53,6 +52,7 @@ export default {
       try {
         const response = await axios.get('http://localhost:5000/obras-pendentes');
         obras.value = response.data;
+        console.log("Obras para autorizar pendentes carregadas:", obras.value);
       } catch (error) {
         console.error("Erro ao carregar obras:", error);
         alert("Erro ao carregar obras pendentes");
