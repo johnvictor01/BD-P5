@@ -128,162 +128,176 @@
     </div>
   </template>
   
-  <script>
-  export default {
-    name: 'FormsCadCliente',
-    data() {
-      return {
-        formData: {
-          // Dados Pessoais
-          Nome: "",
-          Sobrenome: "",
-          CPF: "",
-          DataNascimento: "",
-          Email: "",
-          Telefone: "",
-          
-          // Endereço
-          Rua: "",
-          Numero: "",
-          Bairro: "",
-          Cidade: "",
-          Estado: "",
-          CEP: "",
-          Pais: "BRA", // Valor padrão Brasil
-          
-          // Credenciais
-          NomeUsuario: "",
-          Senha: "",
-        },
-        confirmarSenha: "",
-        submitting: false,
-        estadosBrasil: {
-          "AC": "Acre",
-          "AL": "Alagoas",
-          "AP": "Amapá",
-          "AM": "Amazonas",
-          "BA": "Bahia",
-          "CE": "Ceará",
-          "DF": "Distrito Federal",
-          "ES": "Espírito Santo",
-          "GO": "Goiás",
-          "MA": "Maranhão",
-          "MT": "Mato Grosso",
-          "MS": "Mato Grosso do Sul",
-          "MG": "Minas Gerais",
-          "PA": "Pará",
-          "PB": "Paraíba",
-          "PR": "Paraná",
-          "PE": "Pernambuco",
-          "PI": "Piauí",
-          "RJ": "Rio de Janeiro",
-          "RN": "Rio Grande do Norte",
-          "RS": "Rio Grande do Sul",
-          "RO": "Rondônia",
-          "RR": "Roraima",
-          "SC": "Santa Catarina",
-          "SP": "São Paulo",
-          "SE": "Sergipe",
-          "TO": "Tocantins"
-        }
-      }
-    },
-    computed: {
-      senhasNaoConferem() {
-        return this.formData.Senha && this.confirmarSenha && 
-               this.formData.Senha !== this.confirmarSenha;
-      }
-    },
-    methods: {
-      formatCPF(event) {
-        let value = event.target.value.replace(/\D/g, '');
-        if (value.length > 3) value = value.replace(/^(\d{3})/, '$1.');
-        if (value.length > 7) value = value.replace(/^(\d{3})\.(\d{3})/, '$1.$2.');
-        if (value.length > 11) value = value.replace(/^(\d{3})\.(\d{3})\.(\d{3})/, '$1.$2.$3-');
-        this.formData.CPF = value.substring(0, 14);
+ <script>
+import axios from 'axios';
+
+// Configuração do Axios
+const api = axios.create({
+  baseURL: 'http://localhost:5000',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+export default {
+  name: 'FormsCadCliente',
+  data() {
+    return {
+      formData: {
+        Nome: "",
+        Sobrenome: "",
+        CPF: "",
+        DataNascimento: "",
+        Email: "",
+        Telefone: "",
+        Rua: "",
+        Numero: "",
+        Bairro: "",
+        Cidade: "",
+        Estado: "",
+        CEP: "",
+        Pais: "BRA",
+        NomeUsuario: "",
+        Senha: ""
       },
-      formatTelefone(event) {
-        let value = event.target.value.replace(/\D/g, '');
-        if (value.length > 0) value = `(${value.substring(0, 2)}${value.length > 2 ? ') ' : ''}${value.substring(2)}`;
-        if (value.length > 10) value = `${value.substring(0, 10)}-${value.substring(10)}`;
-        this.formData.Telefone = value.substring(0, 15);
-      },
-      formatCEP(event) {
-        let value = event.target.value.replace(/\D/g, '');
-        if (value.length > 5) value = `${value.substring(0, 5)}-${value.substring(5)}`;
-        this.formData.CEP = value.substring(0, 9);
-      },
-      async submitForm() {
-        if (this.senhasNaoConferem || this.submitting) return;
-        
-        this.submitting = true;
-        
-        try {
-          // Preparar os dados para envio
-          const payload = {
-            pessoa: {
-              Nome: this.formData.Nome,
-              Sobrenome: this.formData.Sobrenome,
-              CPF: this.formData.CPF.replace(/\D/g, ''),
-              DataNascimento: this.formData.DataNascimento,
-              Email: this.formData.Email,
-              Telefone: this.formData.Telefone.replace(/\D/g, '')
-            },
-            endereco: {
-              Rua: this.formData.Rua,
-              Numero: this.formData.Numero,
-              Bairro: this.formData.Bairro,
-              Cidade: this.formData.Cidade,
-              Estado: this.formData.Estado,
-              CEP: this.formData.CEP.replace(/\D/g, ''),
-              Pais: this.formData.Pais
-            },
-            cliente: {
-              NomeUsuario: this.formData.NomeUsuario,
-              Senha: this.formData.Senha
-            }
-          };
-  
-          // Aqui você faria a chamada para sua API
-          console.log("Dados para cadastro:", payload);
-          
-          // Simulando uma requisição assíncrona
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          alert("Cliente cadastrado com sucesso!");
-          this.resetForm();
-          
-        } catch (error) {
-          console.error("Erro ao cadastrar cliente:", error);
-          alert("Ocorreu um erro ao cadastrar o cliente. Por favor, tente novamente.");
-        } finally {
-          this.submitting = false;
-        }
-      },
-      resetForm() {
-        this.formData = {
-          Nome: "",
-          Sobrenome: "",
-          CPF: "",
-          DataNascimento: "",
-          Email: "",
-          Telefone: "",
-          Rua: "",
-          Numero: "",
-          Bairro: "",
-          Cidade: "",
-          Estado: "",
-          CEP: "",
-          Pais: "BRA",
-          NomeUsuario: "",
-          Senha: ""
-        };
-        this.confirmarSenha = "";
+      confirmarSenha: "",
+      submitting: false,
+      errorMessage: "",
+      successMessage: "",
+      estadosBrasil: {
+        "AC": "Acre",
+        "AL": "Alagoas",
+        // ... (restante dos estados)
       }
     }
+  },
+  computed: {
+    senhasNaoConferem() {
+      return this.formData.Senha && this.confirmarSenha && 
+             this.formData.Senha !== this.confirmarSenha;
+    },
+    formInvalido() {
+      return !this.formData.Nome || 
+             !this.formData.Sobrenome ||
+             !this.formData.CPF ||
+             !this.formData.DataNascimento ||
+             !this.formData.Email ||
+             !this.formData.NomeUsuario ||
+             !this.formData.Senha ||
+             this.senhasNaoConferem;
+    }
+  },
+  methods: {
+    formatCPF(event) {
+      let value = event.target.value.replace(/\D/g, '');
+      if (value.length > 3) value = value.replace(/^(\d{3})/, '$1.');
+      if (value.length > 7) value = value.replace(/^(\d{3})\.(\d{3})/, '$1.$2.');
+      if (value.length > 11) value = value.replace(/^(\d{3})\.(\d{3})\.(\d{3})/, '$1.$2.$3-');
+      this.formData.CPF = value.substring(0, 14);
+    },
+    formatTelefone(event) {
+      let value = event.target.value.replace(/\D/g, '');
+      if (value.length > 0) value = `(${value.substring(0, 2)}${value.length > 2 ? ') ' : ''}${value.substring(2)}`;
+      if (value.length > 10) value = `${value.substring(0, 10)}-${value.substring(10)}`;
+      this.formData.Telefone = value.substring(0, 15);
+    },
+    formatCEP(event) {
+      let value = event.target.value.replace(/\D/g, '');
+      if (value.length > 5) value = `${value.substring(0, 5)}-${value.substring(5)}`;
+      this.formData.CEP = value.substring(0, 9);
+    },
+    async submitForm() {
+      if (this.formInvalido || this.submitting) return;
+      
+      this.submitting = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+      
+      try {
+        const payload = {
+          pessoa: {
+            Nome: this.formData.Nome.trim(),
+            Sobrenome: this.formData.Sobrenome.trim(),
+            CPF: this.formData.CPF.replace(/\D/g, ''),
+            DataNascimento: this.formData.DataNascimento,
+            Email: this.formData.Email.trim().toLowerCase(),
+            Telefone: this.formData.Telefone.replace(/\D/g, '')
+          },
+          endereco: {
+            Rua: this.formData.Rua.trim(),
+            Numero: this.formData.Numero,
+            Bairro: this.formData.Bairro.trim(),
+            Cidade: this.formData.Cidade.trim(),
+            Estado: this.formData.Estado,
+            CEP: this.formData.CEP.replace(/\D/g, ''),
+            Pais: this.formData.Pais
+          },
+          cliente: {
+            NomeUsuario: this.formData.NomeUsuario.trim(),
+            Senha: this.formData.Senha
+          }
+        };
+
+        const response = await api.post('/cadastro-cliente', payload);
+        
+        if (response.data.success) {
+          this.successMessage = "Cadastro realizado com sucesso!";
+          this.resetForm();
+        } else {
+          this.errorMessage = response.data.message || "Erro no cadastro";
+        }
+      } catch (error) {
+        this.handleApiError(error);
+      } finally {
+        this.submitting = false;
+      }
+    },
+    handleApiError(error) {
+      if (error.response) {
+        switch (error.response.status) {
+          case 400:
+            this.errorMessage = "Dados inválidos: " + 
+              (error.response.data.message || "verifique os campos");
+            break;
+          case 409:
+            this.errorMessage = "Já existe um cadastro com este CPF, Email ou Nome de Usuário";
+            break;
+          case 500:
+            this.errorMessage = "Erro interno no servidor. Tente novamente mais tarde.";
+            break;
+          default:
+            this.errorMessage = "Erro ao cadastrar: " + error.response.status;
+        }
+      } else if (error.request) {
+        this.errorMessage = "Sem resposta do servidor. Verifique sua conexão.";
+      } else {
+        this.errorMessage = "Erro ao enviar formulário: " + error.message;
+      }
+    },
+    resetForm() {
+      this.formData = {
+        Nome: "",
+        Sobrenome: "",
+        CPF: "",
+        DataNascimento: "",
+        Email: "",
+        Telefone: "",
+        Rua: "",
+        Numero: "",
+        Bairro: "",
+        Cidade: "",
+        Estado: "",
+        CEP: "",
+        Pais: "BRA",
+        NomeUsuario: "",
+        Senha: ""
+      };
+      this.confirmarSenha = "";
+    }
   }
-  </script>
-  
+}
+</script>
+
   <style scoped>
   .cadastro-container {
     max-width: 800px;
