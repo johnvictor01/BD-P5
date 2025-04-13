@@ -2,64 +2,70 @@
   <div>
     <!-- Barra de Filtros -->
     <div class="filtros-container">
-      <div class="filtro">
-        <label for="tipoArte">Tipo de Arte:</label>
-        <select id="tipoArte" v-model="filtros.tipoArte">
+      <div 
+        v-for="(filtro, index) in filtrosConfig" 
+        :key="index" 
+        class="filtro"
+        :class="{'filtro-range': filtro.type === 'range'}"
+      >
+        <label :for="filtro.id">{{ filtro.label }}:</label>
+        
+        <!-- Input de seleção -->
+        <select 
+          v-if="filtro.type === 'select'" 
+          :id="filtro.id" 
+          v-model="filtrosValues[filtro.model]"
+        >
           <option value="">Todos</option>
-          <option value="Visionista">Visionista</option>
-          <option value="Paisagista">Paisagista</option>
+          <option 
+            v-for="(opcao, i) in filtro.options" 
+            :key="i" 
+            :value="opcao.value"
+          >
+            {{ opcao.text }}
+          </option>
         </select>
-      </div>
-
-      <div class="filtro">
-        <label for="valor">Valor (R$):</label>
+        
+        <!-- Input de range -->
+        <div v-else-if="filtro.type === 'range'" class="range-container">
+          <input
+            type="range"
+            :id="filtro.id"
+            v-model="filtrosValues[filtro.model]"
+            :min="filtro.min"
+            :max="filtro.max"
+            :step="filtro.step"
+          />
+          <span class="range-value">{{ formatarValor(filtrosValues[filtro.model], filtro.format) }}</span>
+        </div>
+        
+        <!-- Input de texto/número -->
         <input
-          type="range"
-          id="valor"
-          v-model="filtros.valor"
-          :min="0"
-          :max="10000"
-          step="100"
+          v-else
+          :type="filtro.type"
+          :id="filtro.id"
+          v-model="filtrosValues[filtro.model]"
+          :placeholder="filtro.placeholder"
+          :min="filtro.min"
+          :max="filtro.max"
         />
-        <span>{{ filtros.valor }}</span>
-      </div>
-
-      <div class="filtro">
-        <label for="nome">Pesquisar por Nome:</label>
-        <input type="text" id="nome" v-model="filtros.nome" placeholder="Digite o nome" />
-      </div>
-
-      <div class="filtro">
-        <label for="alturaMin">Altura Mínima (cm):</label>
-        <input type="number" id="alturaMin" v-model="filtros.alturaMin" placeholder="Mínima" />
-      </div>
-
-      <div class="filtro">
-        <label for="alturaMax">Altura Máxima (cm):</label>
-        <input type="number" id="alturaMax" v-model="filtros.alturaMax" placeholder="Máxima" />
-      </div>
-
-      <div class="filtro">
-        <label for="larguraMin">Largura Mínima (cm):</label>
-        <input type="number" id="larguraMin" v-model="filtros.larguraMin" placeholder="Mínima" />
-      </div>
-
-      <div class="filtro">
-        <label for="larguraMax">Largura Máxima (cm):</label>
-        <input type="number" id="larguraMax" v-model="filtros.larguraMax" placeholder="Máxima" />
       </div>
     </div>
 
     <!-- Lista de Obras Filtradas -->
     <div class="obras-container">
       <div v-for="obra in obrasFiltradas" :key="obra.ObraID" class="obra-card">
-        <img :src="obra.Imagem ? `data:${obra.TipoArquivo};base64,${obra.Imagem}` : 'https://via.placeholder.com/150?text=Sem+Imagem'" :alt="obra.Titulo" />        <h3>{{ obra.Titulo }}</h3>
-        <p>{{ obra.Descricao }}</p>
-        <small>Estilo: {{ obra.EstiloArte }}</small>
-        <p><strong>Valor:</strong> R$ {{ parseFloat(obra.Valor).toFixed(2) }}</p>
-        <p><strong>Altura:</strong> {{ obra.Altura }} cm</p>
-        <p><strong>Largura:</strong> {{ obra.Largura }} cm</p>
-        <button @click="adicionarAoCarrinho(obra)" class="btn-adicionar">Adicionar ao Carrinho</button>
+        <img :src="obra.Imagem ? `data:${obra.TipoArquivo};base64,${obra.Imagem}` : 'https://via.placeholder.com/150?text=Sem+Imagem'" :alt="obra.Titulo" />
+        <h3>{{ obra.Titulo }}</h3>
+        <p class="descricao">{{ obra.Descricao }}</p>
+        <div class="detalhes-obra">
+          <p><strong>Estilo:</strong> {{ obra.EstiloArte }}</p>
+          <p><strong>Valor:</strong> R$ {{ formatarValor(obra.Valor, 'moeda') }}</p>
+          <p><strong>Dimensões:</strong> {{ obra.Altura }}cm × {{ obra.Largura }}cm</p>
+        </div>
+        <button @click="adicionarAoCarrinho(obra)" class="btn-adicionar">
+          <i class="fas fa-cart-plus"></i> Adicionar
+        </button>
       </div>
     </div>
   </div>
@@ -78,10 +84,103 @@ export default {
   },
   emits: ['adicionar-ao-carrinho'],
   setup(props, { emit }) {
-    // Filtros
-    const filtros = ref({
+    // Configuração dos filtros
+    const filtrosConfig = [
+      {
+        id: 'tipoArte',
+        label: 'Tipo de Arte',
+        model: 'tipoArte',
+        type: 'select',
+         options: [
+          { value: 'Expressionismo', text: 'Expressionismo' },
+          { value: 'Abstrato', text: 'Abstrato' },
+          { value: 'Realismo', text: 'Realismo' },
+          { value: 'Surrealismo', text: 'Surrealismo' },
+          { value: 'Cubismo', text: 'Cubismo' },
+          { value: 'Impressionismo', text: 'Impressionismo' },
+          { value: 'Pós-Impressionismo', text: 'Pós-Impressionismo' },
+          { value: 'Fauvismo', text: 'Fauvismo' },
+          { value: 'Futurismo', text: 'Futurismo' },
+          { value: 'Dadaísmo', text: 'Dadaísmo' },
+          { value: 'Construtivismo', text: 'Construtivismo' },
+          { value: 'Bauhaus', text: 'Bauhaus' },
+          { value: 'De Stijl', text: 'De Stijl' },
+          { value: 'Pop Art', text: 'Pop Art' },
+          { value: 'Op Art', text: 'Op Art' },
+          { value: 'Minimalismo', text: 'Minimalismo' },
+          { value: 'Arte Conceitual', text: 'Arte Conceitual' },
+          { value: 'Hiperrealismo', text: 'Hiperrealismo' },
+          { value: 'Street Art', text: 'Street Art' },
+          { value: 'Arte Digital', text: 'Arte Digital' },
+          { value: 'Visionista', text: 'Visionista' },
+          { value: 'Paisagista', text: 'Paisagista' },
+          { value: 'Retratista', text: 'Retratista' },
+          { value: 'Barroco', text: 'Barroco' },
+          { value: 'Rococó', text: 'Rococó' },
+          { value: 'Neoclassicismo', text: 'Neoclassicismo' },
+          { value: 'Romantismo', text: 'Romantismo' },
+          { value: 'Academicismo', text: 'Academicismo' },
+          { value: 'Pré-Rafaelitas', text: 'Pré-Rafaelitas' },
+          { value: 'Simbolismo', text: 'Simbolismo' },
+          { value: 'Art Nouveau', text: 'Art Nouveau' },
+          { value: 'Art Déco', text: 'Art Déco' }
+        ]
+      },
+      {
+        id: 'valor',
+        label: 'Valor Máximo',
+        model: 'valor',
+        type: 'range',
+        min: 0,
+        max: 1000000,
+        step: 100,
+        format: 'moeda'
+      },
+      {
+        id: 'nome',
+        label: 'Pesquisar',
+        model: 'nome',
+        type: 'text',
+        placeholder: 'Digite o nome'
+      },
+      {
+        id: 'alturaMin',
+        label: 'Altura Mínima',
+        model: 'alturaMin',
+        type: 'number',
+        placeholder: 'Mínima (cm)',
+        min: 0
+      },
+      {
+        id: 'alturaMax',
+        label: 'Altura Máxima',
+        model: 'alturaMax',
+        type: 'number',
+        placeholder: 'Máxima (cm)',
+        min: 0
+      },
+      {
+        id: 'larguraMin',
+        label: 'Largura Mínima',
+        model: 'larguraMin',
+        type: 'number',
+        placeholder: 'Mínima (cm)',
+        min: 0
+      },
+      {
+        id: 'larguraMax',
+        label: 'Largura Máxima',
+        model: 'larguraMax',
+        type: 'number',
+        placeholder: 'Máxima (cm)',
+        min: 0
+      }
+    ];
+
+    // Valores dos filtros
+    const filtrosValues = ref({
       tipoArte: '',
-      valor: 10000, // Valor máximo inicial
+      valor: 5000,
       nome: '',
       alturaMin: null,
       alturaMax: null,
@@ -89,117 +188,197 @@ export default {
       larguraMax: null,
     });
 
+    // Função para formatar valores
+    const formatarValor = (valor, tipo) => {
+      if (tipo === 'moeda') {
+        return parseFloat(valor).toFixed(2).replace('.', ',');
+      }
+      return valor;
+    };
+
     // Filtra as obras com base nos filtros aplicados
     const obrasFiltradas = computed(() => {
       return props.obras.filter((obra) => {
-        const tipoArteMatch =
-          !filtros.value.tipoArte || obra.EstiloArte === filtros.value.tipoArte;
-        const valorMatch = parseFloat(obra.Valor) <= filtros.value.valor;
-        const nomeMatch =
-          !filtros.value.nome ||
-          obra.Titulo.toLowerCase().includes(filtros.value.nome.toLowerCase());
-        const alturaMatch =
-          (!filtros.value.alturaMin || obra.Altura >= filtros.value.alturaMin) &&
-          (!filtros.value.alturaMax || obra.Altura <= filtros.value.alturaMax);
-        const larguraMatch =
-          (!filtros.value.larguraMin || obra.Largura >= filtros.value.larguraMin) &&
-          (!filtros.value.larguraMax || obra.Largura <= filtros.value.larguraMax);
-
         return (
-          tipoArteMatch && valorMatch && nomeMatch && alturaMatch && larguraMatch
+          (!filtrosValues.value.tipoArte || obra.EstiloArte === filtrosValues.value.tipoArte) &&
+          parseFloat(obra.Valor) <= filtrosValues.value.valor &&
+          (!filtrosValues.value.nome || obra.Titulo.toLowerCase().includes(filtrosValues.value.nome.toLowerCase())) &&
+          (!filtrosValues.value.alturaMin || obra.Altura >= filtrosValues.value.alturaMin) &&
+          (!filtrosValues.value.alturaMax || obra.Altura <= filtrosValues.value.alturaMax) &&
+          (!filtrosValues.value.larguraMin || obra.Largura >= filtrosValues.value.larguraMin) &&
+          (!filtrosValues.value.larguraMax || obra.Largura <= filtrosValues.value.larguraMax)
         );
       });
     });
 
     // Adiciona uma obra ao carrinho
     const adicionarAoCarrinho = (obra) => {
-      console.log('Obra selecionada:', obra); // Depuração
-      emit('adicionar-ao-carrinho', obra); // Emite o evento com a obra selecionada
+      emit('adicionar-ao-carrinho', obra);
     };
 
     return {
-      filtros,
+      filtrosConfig,
+      filtrosValues,
       obrasFiltradas,
       adicionarAoCarrinho,
+      formatarValor
     };
   },
 };
 </script>
 
-<style>
+<style scoped>
 .filtros-container {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
-  margin: 10px 0;
+  margin: 20px 0;
   padding: 20px;
-  background-color: #f9f9f9;
+  background-color: #f8f9fa;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
 }
 
 .filtro {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 }
 
 .filtro label {
-  font-weight: bold;
+  font-weight: 600;
+  color: #343a40;
+  font-size: 0.9rem;
 }
 
 .filtro input,
 .filtro select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.3s;
+}
+
+.filtro input:focus,
+.filtro select:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.filtro-range {
+  grid-column: span 2;
+}
+
+.range-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.range-container input[type="range"] {
+  flex: 1;
+  height: 8px;
+  cursor: pointer;
+}
+
+.range-value {
+  min-width: 60px;
+  text-align: right;
+  font-weight: 500;
 }
 
 .obras-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
 }
 
 .obra-card {
-  width: 200px;
-  text-align: center;
-  border: 1px solid #ccc;
-  padding: 10px;
+  display: flex;
+  align-items: center;
+  background: white;
   border-radius: 10px;
-  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
-  background-color: white;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.obra-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 .obra-card img {
   width: 100%;
-  height: auto;
-  border-radius: 5px;
+  height: 200px;
+  object-fit: cover;
+  border-bottom: 1px solid #eee;
 }
 
-.obra-card p {
-  font-weight: bold;
-  margin: 10px 0 5px;
+.obra-card h3 {
+  margin: 15px 15px 5px;
+  font-size: 1.1rem;
+  color: #212529;
 }
 
-.obra-card small {
-  font-size: 12px;
-  color: gray;
+.descricao {
+  margin: 0 15px 10px;
+  color: #6c757d;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.detalhes-obra {
+  padding: 0 15px;
+  margin-bottom: 15px;
+}
+
+.detalhes-obra p {
+  margin: 5px 0;
+  font-size: 0.85rem;
+  color: #495057;
 }
 
 .btn-adicionar {
-  padding: 8px 12px;
-  background-color: #4caf50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 30px);
+  margin: 0 15px 15px;
+  padding: 10px;
+  background-color: #28a745;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
+  font-size: 0.9rem;
   cursor: pointer;
-  margin-top: 10px;
+  transition: background-color 0.3s;
 }
 
 .btn-adicionar:hover {
-  background-color: #45a049;
+  background-color: #218838;
+}
+
+.btn-adicionar i {
+  font-size: 0.9rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .filtros-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .filtro-range {
+    grid-column: span 1;
+  }
+  
+  .obras-container {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
