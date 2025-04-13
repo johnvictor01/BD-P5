@@ -297,8 +297,6 @@ export default {
 }
 
 .obra-card {
-  display: flex;
-  align-items: center;
   background: white;
   border-radius: 10px;
   overflow: hidden;
