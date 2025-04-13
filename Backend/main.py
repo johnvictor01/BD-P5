@@ -1289,10 +1289,6 @@ def cadastro_cliente():
         cursor.close()
         conexao.close()
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
 
 #=======================================================================================================
 # Operações de UPDATE 
