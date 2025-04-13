@@ -564,7 +564,7 @@ def listar_obras_pendentes():
     
     return jsonify(obras)
 
-# Endpoint para listar obras pendentes (status = 2)
+# Endpoint para listar Vendas pendentes (status = 3)
 @app.route('/obras-pendentes-vendas', methods=['GET'])
 def listar_obras_pendentes_vendas():
     conexao = conectar_banco()

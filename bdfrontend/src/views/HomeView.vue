@@ -2,9 +2,9 @@
   <div>
     <CabecalhoHome/>
     <MoreInformation/>
-    <p>Abaixo os cadastros</p>
     <button class="Button" @click="type = (!type)">Deseja Cadastrar?</button>
     <FormsCadCliente v-if="type" />
+    
     <Contacts/>
     <Footer/>
   </div>
