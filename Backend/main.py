@@ -1532,83 +1532,104 @@ def cadastro_autor():
             print("Conexão fechada")
         print("=== FIM DA REQUISIÇÃO ===\n")
 
-        
+
 
 @app.route('/cadastro-colaborador', methods=['POST'])
 def cadastro_colaborador():
-    # Obter dados JSON da requisição
-    data = request.get_json()
-    print(data)
-    
-    # Extrair dados básicos
-    pessoa = data.get('pessoa', {})
-    funcionario = data.get('funcionario', {})
-    endereco = data.get('endereco', {})
-    
+    print("\n=== INÍCIO DA REQUISIÇÃO DE COLABORADOR ===")
     try:
-        # Conectar ao banco de dados
+        data = request.get_json()
+        print("Dados recebidos:", data)
+        
+        # Validação básica
+        required_fields = {
+            'pessoa': ['Nome', 'Sobrenome', 'CPF', 'DataNascimento', 'Email'],
+            'funcionario': ['NomeUsuario', 'Senha', 'Cargo', 'DataContratacao', 'Salario']
+        }
+        
+        for category, fields in required_fields.items():
+            if category not in data:
+                print(f"Campo {category} faltando")
+                return jsonify({"success": False, "message": f"Dados de {category} não fornecidos"}), 400
+            for field in fields:
+                if field not in data[category] or not data[category][field]:
+                    print(f"Campo obrigatório faltando: {category}.{field}")
+                    return jsonify({"success": False, "message": f"Campo obrigatório: {field}"}), 400
+
+        pessoa = data['pessoa']
+        funcionario = data['funcionario']
+        endereco = data.get('endereco', {})
+        
+        # Conexão com o banco
         conexao = conectar_banco()
         cursor = conexao.cursor(dictionary=True)
-        
-        # Inserir na tabela Pessoa
+
+        # 1. Inserir Pessoa
         cursor.execute(
             "INSERT INTO Pessoa (Nome, Sobrenome, CPF, DataNascimento, Email, Telefone) "
             "VALUES (%s, %s, %s, %s, %s, %s)",
             (
-                pessoa.get('Nome'),
-                pessoa.get('Sobrenome'),
-                pessoa.get('CPF', '').replace('.', '').replace('-', ''),
-                pessoa.get('DataNascimento'),
-                pessoa.get('Email'),
-                pessoa.get('Telefone', '').replace('(', '').replace(')', '').replace(' ', '').replace('-', '')
+                pessoa['Nome'],
+                pessoa['Sobrenome'],
+                re.sub(r'[^0-9]', '', pessoa.get('CPF', '')),
+                pessoa['DataNascimento'],
+                pessoa['Email'],
+                re.sub(r'[^0-9]', '', pessoa.get('Telefone', ''))
             )
         )
         pessoa_id = cursor.lastrowid
-        
-        # Gerar matrícula simples
-        # matricula = f"CL{pessoa_id:04d}"
-        
-        # Inserir na tabela Cliente (com hash da senha)
+
+        # 2. Inserir Funcionario
         cursor.execute(
             "INSERT INTO Funcionario (PessoaID, NomeUsuario, Senha, Cargo, DataContratacao, Salario) "
-            "VALUES (%s, %s, %s, %s)",
+            "VALUES (%s, %s, %s, %s, %s, %s)",  # Corrigido para 6 valores
             (
                 pessoa_id,
-                funcionario.get('NomeUsuario'),
-                funcionario.get('Senha', ''),
-                funcionario.get('Cargo'),
-                funcionario.get('DataContratacao'),
-                funcionario.get('Salario', 0)
+                funcionario['NomeUsuario'],
+                funcionario['Senha'],
+                funcionario['Cargo'],
+                funcionario['DataContratacao'],
+                float(funcionario['Salario'])
             )
         )
 
-        # Inserir na tabela Endereco
-        cursor.execute(
-            "INSERT INTO Endereco (PessoaID, Rua, Numero, Bairro, Cidade, Estado, CEP, Pais) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-            (
-                pessoa_id,
-                endereco.get('Rua'),
-                endereco.get('Numero'),
-                endereco.get('Bairro'),
-                endereco.get('Cidade'),
-                endereco.get('Estado'),
-                endereco.get('CEP'),
-                endereco.get('Pais'),
+        # 3. Inserir Endereço
+        if endereco:
+            cursor.execute(
+                "INSERT INTO Endereco (PessoaID, Rua, Numero, Bairro, Cidade, Estado, CEP, Pais) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    pessoa_id,
+                    endereco.get('Rua'),
+                    endereco.get('Numero'),
+                    endereco.get('Bairro'),
+                    endereco.get('Cidade'),
+                    endereco.get('Estado'),
+                    re.sub(r'[^0-9]', '', endereco.get('CEP', '')),
+                    endereco.get('Pais', 'BRA')
+                )
             )
-        )
         
-        # Confirmar as alterações
         conexao.commit()
         
         return jsonify({
             "success": True,
-            "message": "Cliente cadastrado com sucesso",
-            "cliente_id": pessoa_id,
-            "matricula": matricula
+            "message": "Funcionário cadastrado com sucesso",
+            "funcionario_id": pessoa_id
         }), 201
         
+    except mysql.connector.IntegrityError as e:
+        conexao.rollback()
+        error_msg = "Erro de duplicidade: "
+        if "CPF" in str(e): error_msg += "CPF já cadastrado"
+        elif "Email" in str(e): error_msg += "Email já cadastrado"
+        elif "NomeUsuario" in str(e): error_msg += "Nome de usuário já existe"
+        else: error_msg = "Erro de integridade no banco"
+        return jsonify({"success": False, "message": error_msg}), 400
+        
     except Exception as e:
+        print("Erro:", str(e))
+        if 'conexao' in locals(): conexao.rollback()
         return jsonify({
             "success": False,
             "message": "Erro no servidor",
@@ -1616,9 +1637,9 @@ def cadastro_colaborador():
         }), 500
         
     finally:
-        cursor.close()
-        conexao.close()
-
+        if 'cursor' in locals(): cursor.close()
+        if 'conexao' in locals(): conexao.close()
+        print("=== FIM DA REQUISIÇÃO ===")
 
 #=======================================================================================================
 # Operações de UPDATE 
