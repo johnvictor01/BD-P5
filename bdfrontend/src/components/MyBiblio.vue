@@ -1,6 +1,6 @@
 <template>
     <div class="biblio-container">
-        <h1>Minha Biblioteca de Obras</h1>
+        <h1>Sua Biblioteca de Obras</h1>
         <div v-if="loading">
             <p>Carregando obras...</p>
         </div>

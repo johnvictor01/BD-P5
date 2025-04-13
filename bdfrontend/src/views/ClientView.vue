@@ -3,12 +3,16 @@
     <CabecalhoPessoa :tipoUsuario="1" />
     <br>
     <br />
-    <p>_</p>
     <!-- Passa obrasNaBiblio como prop para MyBiblio -->
     <MyBiblio v-if="obrasNaBiblio.length > 0" :obras="obrasNaBiblio" />
+
     <br>
     <br />
-    <h1>Vamos às compras?</h1>
+    <div>
+    <h1 v-if=" compra === false" >Vamos às compras?</h1>
+    <p v-if="compra === true" style="color: red; font-size: 1.5rem;">Ops... parece que não tem nenhuma obra disponivel
+       para compra no momento!</p>
+  </div>
     <div class="Filtros">
       <Filters :obras="obrasDisponiveis" @adicionar-ao-carrinho="adicionarAoCarrinho" />
     </div>
@@ -42,7 +46,8 @@ export default {
       itensCarrinho: [],
       obrasDisponiveis: [], // Armazena as obras disponíveis
       obrasNaBiblio: [], // Armazena as obras da biblioteca
-      loading: false
+      loading: false,
+      compra : true
     };
   },
   methods: {
@@ -73,9 +78,9 @@ export default {
         console.log('Obras disponíveis:', responseDisponiveis.data);  // Depuração
 
         if (responseDisponiveis.data.length === 0) {
-          alert("Nenhuma obra disponível.");
           this.obrasDisponiveis = [];  // Define o array de obras como vazio
         } else {
+          this.compra = false
           this.obrasDisponiveis = responseDisponiveis.data;
         }
 
