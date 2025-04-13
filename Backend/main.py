@@ -106,7 +106,7 @@ def dados_cliente_logado():
         FROM Cliente c
         JOIN Pessoa p ON c.PessoaID = p.ID
         LEFT JOIN Endereco e ON e.PessoaID = p.ID
-        WHERE c.MatriculaCliente = %s
+        WHERE c.MatriculaCliente = %s limit 1
         """
         cursor.execute(query, (matricula_cliente,))
         dados = cursor.fetchone()
@@ -688,7 +688,7 @@ def obras_disponiveis():
             Galeria.IdDono
         FROM Galeria
         INNER JOIN ObraDeArte ON Galeria.ObraID = ObraDeArte.ID
-        WHERE Galeria.Status = 1 or Galeria.IdDono != %s
+        WHERE Galeria.Status = 1 and Galeria.IdDono != %s
     """
     cursor.execute(query, (matricula_cliente,))
     obras = cursor.fetchall()
@@ -1115,7 +1115,7 @@ def gerar_relatorio_pdf():
             FROM 
             Cliente c JOIN Endereco e ON c.PessoaID = e.PessoaID
             JOIN Pessoa p ON c.PessoaID = p.ID
-            WHERE c.MatriculaCliente = %s
+            WHERE c.MatriculaCliente = %s limit 1
         """, (matricula_cliente,))
         cliente = cursor.fetchone()
 
