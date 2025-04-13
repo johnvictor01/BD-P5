@@ -88,7 +88,7 @@ def verificar_usuario():
 def dados_cliente_logado():
     matricula_cliente = session.get('matricula_cliente')
 
-    #print("1 -- matricula do cliente: ",matricula_cliente)
+    print("1 -- matricula do cliente: ",matricula_cliente)
 
     if not matricula_cliente:
         return jsonify({"erro": "Usuário não autenticado"}), 401
@@ -107,11 +107,12 @@ def dados_cliente_logado():
         FROM Cliente c
         JOIN Pessoa p ON c.PessoaID = p.ID
         LEFT JOIN Endereco e ON e.PessoaID = p.ID
-        WHERE c.MatriculaCliente = %s
+        WHERE c.MatriculaCliente = %s limit 1
         """
         cursor.execute(query, (matricula_cliente,))
         dados = cursor.fetchone()
-
+        print("Printando os dados")
+        print(dados)
         if not dados:
             return jsonify({"erro": "Dados não encontrados"}), 404
 
@@ -689,7 +690,7 @@ def obras_disponiveis():
             Galeria.IdDono
         FROM Galeria
         INNER JOIN ObraDeArte ON Galeria.ObraID = ObraDeArte.ID
-        WHERE Galeria.Status = 1 or Galeria.IdDono != %s
+        WHERE Galeria.Status = 1 and Galeria.IdDono != %s
     """
     cursor.execute(query, (matricula_cliente,))
     obras = cursor.fetchall()
@@ -1019,7 +1020,7 @@ def finalizar_compra():
 @app.route('/relatorio-cliente-pdf', methods=['GET'])
 def gerar_relatorio_pdf():
     matricula_cliente = session.get('matricula_cliente')
-    
+    print("Pegando a matricula do cliente", matricula_cliente)
     if not matricula_cliente:
         return jsonify({"erro": "Usuário não autenticado"}), 401
 
@@ -1028,6 +1029,7 @@ def gerar_relatorio_pdf():
 
     try:
         # Buscar dados do cliente
+
         cursor.execute("""
            SELECT 
             p.Nome, p.Sobrenome, p.Email, p.Telefone,  p.CPF, 
@@ -1036,9 +1038,10 @@ def gerar_relatorio_pdf():
             FROM 
             Cliente c JOIN Endereco e ON c.PessoaID = e.PessoaID
             JOIN Pessoa p ON c.PessoaID = p.ID
-            WHERE c.MatriculaCliente = %s
+            WHERE c.MatriculaCliente = %s limit 1
         """, (matricula_cliente,))
         cliente = cursor.fetchone()
+        print("Dados Pessoais")
 
         if not cliente:
             return jsonify({"erro": "Cliente não encontrado"}), 404
@@ -1055,6 +1058,7 @@ def gerar_relatorio_pdf():
         """, (matricula_cliente,))
         compras = cursor.fetchall()
 
+        print("Dados das  compras")
         # Buscar obras adquiridas
         cursor.execute("""
             SELECT o.Titulo, p.Valor, v.DataVenda
@@ -1067,7 +1071,7 @@ def gerar_relatorio_pdf():
             
         """, (matricula_cliente,))
         obras = cursor.fetchall()
-
+        print("Finalizou compras")
         # Calcular total gasto
         total_gasto = sum(compra['ValorTotal'] for compra in compras)
 
