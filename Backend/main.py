@@ -903,23 +903,53 @@ def finalizar_compra():
     try:
         # Verifica autenticação
         matricula_cliente = session.get('matricula_cliente')
+        print("Matricula", matricula_cliente)
         if not matricula_cliente:
             return jsonify({"erro": "Usuário não autenticado"}), 401
         
-        # Valida método de pagamento
-        data = request.get_json()
-        if not data:
-            return jsonify({"erro": "Dados inválidos"}), 400
+        # Obtém dados da requisição
+        try:
+            data = request.get_json()
+            print("Dados recebidos:", data)
+            if not data:
+                return jsonify({"erro": "Dados inválidos"}), 400
+        except Exception as e:
+            print("Erro ao parsear JSON:", str(e))
+            return jsonify({"erro": "Formato de dados inválido"}), 400
             
         metodo_pagamento = data.get('metodo_pagamento')
-        if not metodo_pagamento or metodo_pagamento not in ['cartao', 'pix', 'boleto']:
-            return jsonify({"erro": "Método de pagamento inválido"}), 400
+        preferencias = data.get('preferencias', {})  # Assume padrão vazio se não enviado
+        valor_original = data.get('valor_original', 0)
+        valor_final = data.get('valor_final', 0)
+        desconto = data.get('desconto', 0)
 
+        print(f"Preferencias recebidas: {preferencias}")
+        print(f"Time: {preferencias.get('time', '').lower()}")
+        print(f"É fã de One Piece: {preferencias.get('assisteOnePiece', False)}")
+        print(f"É de Sousa: {preferencias.get('ehDeSousa', False)}")  # Corrigido para ehDeSousa
+
+        # Métodos válidos (incluindo os especiais)
+        metodos_validos = ['cartao', 'pix', 'boleto', 'vasco', 'berrys']
+        if not metodo_pagamento or metodo_pagamento.lower() not in metodos_validos:
+            return jsonify({
+                "erro": "Método de pagamento inválido",
+                "metodos_aceitos": metodos_validos
+            }), 400
+
+        # Verificação especial para pagamento com Berrys
+        if metodo_pagamento.lower() == 'berrys' and not preferencias.get('assisteOnePiece'):
+            return jsonify({
+                "erro": "Pagamento com Berrys disponível apenas para fãs de One Piece",
+                "detalhes": "É necessário marcar 'Sou fã de One Piece'"
+            }), 400
+
+        print("Conectando ao banco...")
         conexao = conectar_banco()
         cursor = conexao.cursor(dictionary=True)
 
         try:
-            # 1. Obtém o PessoaID correspondente à MatriculaCliente
+            print("Obtendo dados do cliente...")
+            # 1. Obtém dados do cliente
             cursor.execute("""
                 SELECT PessoaID 
                 FROM Cliente 
@@ -927,12 +957,16 @@ def finalizar_compra():
             """, (matricula_cliente,))
             cliente = cursor.fetchone()
             
+            print("Resultado cliente:", cliente)
             if not cliente:
                 return jsonify({"erro": "Usuário não encontrado"}), 404
                 
             pessoa_id = cliente['PessoaID']
+            print("Pessoa ID", pessoa_id)
 
             # 2. Recupera itens do carrinho com estoque disponível
+            print("Matricula que vai pra query", matricula_cliente)
+
             cursor.execute("""
                 SELECT o.ID, g.valor 
                 FROM ObraDeArte o
@@ -942,41 +976,74 @@ def finalizar_compra():
                 FOR UPDATE
             """, (matricula_cliente,))
             itens = cursor.fetchall()
+            print(itens)
 
             if not itens:
                 return jsonify({"erro": "Carrinho vazio ou itens indisponíveis"}), 400
+            print("Passou do if")
 
-            # 3. Calcula valor total
-            valor_total = sum(float(item['valor']) for item in itens)
+            # 3. Valida valores recebidos com cálculo real
+            valor_original_calculado = sum(float(item['valor']) for item in itens)  # Corrigido a sintaxe
+            print("Valor original Calculado", valor_original_calculado)
+            print(type(valor_original_calculado))
+            print(abs(valor_original - valor_original_calculado))
+            if abs(valor_original - valor_original_calculado) > 0.01:
+                return jsonify({
+                    "erro": "Divergência no valor da compra",
+                    "detalhes": f"Valor recebido: {valor_original}, Valor calculado: {valor_original_calculado}"
+                }), 400
+            print("Indo para o steep 4")
 
-            # 4. Gera ID único para o pedido
+            # 4. Aplica regras especiais e valida descontos
+            mensagem_desconto = ""
+            time_cliente = preferencias.get('time', '').lower()
+            
+            # Cortesia para torcedores do Vasco
+            if time_cliente == 'vasco':
+                valor_final = 0
+                desconto = valor_original
+                mensagem_desconto = "Cortesia para torcedor do Vasco - Grande Time!"
+                metodo_pagamento = 'vasco'  # Sobrescreve o método para registro
+            
+            # Verificação de desconto máximo (35% exceto para Vasco)
+            elif desconto > (valor_original * 0.35):
+                return jsonify({
+                    "erro": "Desconto inválido",
+                    "detalhes": f"Desconto máximo permitido é 35% (R$ {valor_original * 0.35:.2f})"
+                }), 400
+
+            # 5. Gera ID único para o pedido
             pedido_id = f"PED-{datetime.now().strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
 
-            # 5. Inicia transação
+            # 6. Inicia transação
             cursor.execute("START TRANSACTION")
 
-            # 6. Insere venda usando PessoaID como ClienteID
+            # 7. Insere venda
             cursor.execute("""
                 INSERT INTO Venda (ClienteID, PedidoID, ValorTotal, DataVenda)
                 VALUES (%s, %s, %s, NOW())
-            """, (pessoa_id, pedido_id, valor_total))
+            """, (pessoa_id, pedido_id, valor_final))
             venda_id = cursor.lastrowid
 
-            # 7. Insere itens do pedido
+            # 8. Insere itens do pedido
             for item in itens:
                 cursor.execute("""
                     INSERT INTO Pedido (VendaID, ObraID, Valor)
                     VALUES (%s, %s, %s)
                 """, (venda_id, item['ID'], item['valor']))
 
-            # 8. Insere pagamento
-            situacao = 1 if metodo_pagamento == 'boleto' else 2  # 1 = pendente, 2 = aprovado
+            # 9. Insere pagamento com observação sobre descontos
+            situacao = 1 if metodo_pagamento == 'boleto' else 2
             cursor.execute("""
-                INSERT INTO Pagamento (VendaID, ValorTotalPago, MetodoPagamento, Situacao)
-                VALUES (%s, %s, %s, %s)
-            """, (venda_id, valor_total, metodo_pagamento, situacao))
+                INSERT INTO Pagamento (
+                    VendaID,
+                    ValorTotalPago,
+                    MetodoPagamento,
+                    Situacao
+                ) VALUES (%s, %s, %s, %s)
+            """, (venda_id, valor_final, metodo_pagamento, situacao))
 
-            # 9. Atualiza status das obras usando MatriculaCliente
+            # 10. Atualiza status das obras
             for item in itens:
                 cursor.execute("""
                     UPDATE galeria
@@ -984,27 +1051,37 @@ def finalizar_compra():
                     WHERE ObraID = %s AND status = 1
                 """, (matricula_cliente, item['ID']))
 
-            # 10. Limpa carrinho
+            # 11. Limpa carrinho
             cursor.execute("DELETE FROM carrinhos WHERE usuario_id = %s", (matricula_cliente,))
 
             # Confirma transação
             conexao.commit()
 
-            cursor.callproc('AtualizarQuantidadeObrasCompradas', [matricula_cliente])
-            conexao.commit()
+            # Atualiza quantidade de obras compradas (se a stored procedure existir)
+            try:
+                cursor.callproc('AtualizarQuantidadeObrasCompradas', [matricula_cliente])
+                conexao.commit()
+            except Exception as proc_error:
+                print(f"Ignorando erro na procedure: {str(proc_error)}")
 
             return jsonify({
                 "sucesso": True,
-                "mensagem": "Compra finalizada com sucesso",
+                "mensagem": "Compra processada com sucesso",
                 "pedido_id": pedido_id,
-                "venda_id": venda_id
-            }), 200
+                "detalhes": {
+                    "metodo_pagamento": metodo_pagamento,
+                    "valor_original": valor_original,
+                    "desconto": desconto,
+                    "valor_final": valor_final,
+                    "preferencias": preferencias
+                }
+            })
 
         except Exception as e:
             conexao.rollback()
-            app.logger.error(f"Erro ao finalizar compra: {str(e)}")
+            print("Erro na transação:", str(e))
             return jsonify({
-                "erro": "Erro interno ao processar pagamento",
+                "erro": "Erro ao processar compra",
                 "detalhes": str(e)
             }), 500
 
@@ -1013,8 +1090,11 @@ def finalizar_compra():
             conexao.close()
 
     except Exception as e:
-        app.logger.error(f"Erro geral: {str(e)}")
-        return jsonify({"erro": "Erro interno no servidor"}), 500
+        print("Erro geral:", str(e))
+        return jsonify({
+            "erro": "Erro interno no servidor",
+            "detalhes": str(e)
+        }), 500
 
 
 @app.route('/relatorio-cliente-pdf', methods=['GET'])
