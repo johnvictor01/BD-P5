@@ -7,6 +7,7 @@ from flask import Flask, jsonify, make_response, request, session
 import mysql.connector
 from flask_cors import CORS
 import base64
+import re
 #
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
@@ -1220,6 +1221,77 @@ def gerar_relatorio_pdf():
     finally:
         cursor.close()
         conexao.close()
+
+
+@app.route('/cadastro-cliente', methods=['POST'])
+def cadastro_cliente():
+    # Obter dados JSON da requisição
+    data = request.get_json()
+    print(data)
+    
+    # Extrair dados básicos
+    pessoa = data.get('pessoa', {})
+    cliente = data.get('cliente', {})
+    
+    try:
+        # Conectar ao banco de dados
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        
+        # Inserir na tabela Pessoa
+        cursor.execute(
+            "INSERT INTO Pessoa (Nome, Sobrenome, CPF, DataNascimento, Email, Telefone) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (
+                pessoa.get('Nome'),
+                pessoa.get('Sobrenome'),
+                pessoa.get('CPF', '').replace('.', '').replace('-', ''),
+                pessoa.get('DataNascimento'),
+                pessoa.get('Email'),
+                pessoa.get('Telefone', '').replace('(', '').replace(')', '').replace(' ', '').replace('-', '')
+            )
+        )
+        pessoa_id = cursor.lastrowid
+        
+        # Gerar matrícula simples
+        matricula = f"CL{pessoa_id:04d}"
+        
+        # Inserir na tabela Cliente (com hash da senha)
+        cursor.execute(
+            "INSERT INTO Cliente (PessoaID, MatriculaCliente, NomeUsuario, Senha) "
+            "VALUES (%s, %s, %s, %s)",
+            (
+                pessoa_id,
+                matricula,
+                cliente.get('NomeUsuario'),
+                cliente.get('Senha', '')
+            )
+        )
+        
+        # Confirmar as alterações
+        conexao.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Cliente cadastrado com sucesso",
+            "cliente_id": pessoa_id,
+            "matricula": matricula
+        }), 201
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": "Erro no servidor",
+            "error": str(e)
+        }), 500
+        
+    finally:
+        cursor.close()
+        conexao.close()
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
 
 
 #=======================================================================================================
