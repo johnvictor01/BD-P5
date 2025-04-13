@@ -1387,89 +1387,152 @@ def cadastro_cliente():
         conexao.close()
 
 
+
 @app.route('/cadastro-autor', methods=['POST'])
 def cadastro_autor():
-    # Obter dados JSON da requisição
-    data = request.get_json()
-    print(data)
-    
-    # Extrair dados básicos
-    pessoa = data.get('pessoa', {})
-    autor = data.get('autor', {})
-    endereco = data.get('endereco', {})
-    
+    print("\n=== INÍCIO DA REQUISIÇÃO ===")
     try:
-        # Conectar ao banco de dados
+        data = request.get_json()
+        print("Dados recebidos:", data)
+        
+        # Validação básica dos dados recebidos
+        required_fields = {
+            'pessoa': ['Nome', 'Sobrenome', 'CPF', 'DataNascimento', 'Email'],
+            'autor': ['NomeUsuario', 'Senha']
+        }
+        
+        for category, fields in required_fields.items():
+            if category not in data:
+                print(f"Campo {category} faltando nos dados")
+                return jsonify({"success": False, "message": f"Dados de {category} não fornecidos"}), 400
+            for field in fields:
+                if field not in data[category] or not data[category][field]:
+                    print(f"Campo obrigatório faltando: {category}.{field}")
+                    return jsonify({"success": False, "message": f"Campo obrigatório: {field}"}), 400
+    
+        pessoa = data['pessoa']
+        autor = data['autor']
+        endereco = data.get('endereco', {})
+        print("Dados validados com sucesso")
+
+        # Conexão com o banco
+        print("Conectando ao banco de dados...")
         conexao = conectar_banco()
         cursor = conexao.cursor(dictionary=True)
+        print("Conexão estabelecida")
+
+        # 1. Inserir na tabela Pessoa
+        cpf_limpo = pessoa['CPF'].replace('.', '').replace('-', '')
+        telefone_limpo = re.sub(r'[^0-9]', '', pessoa.get('Telefone', ''))
+        print(f"Inserindo pessoa: {pessoa['Nome']} {pessoa['Sobrenome']}, CPF: {cpf_limpo}")
         
-        # Inserir na tabela Pessoa
         cursor.execute(
             "INSERT INTO Pessoa (Nome, Sobrenome, CPF, DataNascimento, Email, Telefone) "
             "VALUES (%s, %s, %s, %s, %s, %s)",
             (
-                pessoa.get('Nome'),
-                pessoa.get('Sobrenome'),
-                pessoa.get('CPF', '').replace('.', '').replace('-', ''),
-                pessoa.get('DataNascimento'),
-                pessoa.get('Email'),
-                pessoa.get('Telefone', '').replace('(', '').replace(')', '').replace(' ', '').replace('-', '')
+                pessoa['Nome'],
+                pessoa['Sobrenome'],
+                cpf_limpo,
+                pessoa['DataNascimento'],
+                pessoa['Email'],
+                telefone_limpo
             )
         )
         pessoa_id = cursor.lastrowid
-        
-        # Gerar matrícula simples
-        matricula = f"CL{pessoa_id:04d}"
-        
-        # Inserir na tabela Cliente (com hash da senha)
+        print(f"Pessoa inserida com ID: {pessoa_id}")
+
+        # 2. Gerar matrícula de autor
+        cursor.execute("SELECT COUNT(*) as total FROM Autor")
+        total_autores = cursor.fetchone()['total']
+        matricula = f"AU{total_autores + 1:04d}"
+        print(f"Matrícula gerada: {matricula}")
+
+        # 3. Inserir na tabela Autor (senha em texto puro)
+        print(f"Inserindo autor: {autor['NomeUsuario']}")
         cursor.execute(
-            "INSERT INTO Autor (PessoaID, MatriculaAutor, NomeUsuario, Senha) "
+            "INSERT INTO Autor (PessoaID, MatriculaAutor, NomeUsuario, Senha) "  # Mantenha a coluna como Senha
             "VALUES (%s, %s, %s, %s)",
             (
                 pessoa_id,
                 matricula,
-                autor.get('NomeUsuario'),
-                autor.get('Senha', '')
+                autor['NomeUsuario'],
+                autor['Senha']  # Senha em texto puro
             )
         )
+        print("Autor inserido com sucesso")
 
-        # Inserir na tabela Endereco
-        cursor.execute(
-            "INSERT INTO Endereco (PessoaID, Rua, Numero, Bairro, Cidade, Estado, CEP, Pais) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-            (
-                pessoa_id,
-                endereco.get('Rua'),
-                endereco.get('Numero'),
-                endereco.get('Bairro'),
-                endereco.get('Cidade'),
-                endereco.get('Estado'),
-                endereco.get('CEP'),
-                endereco.get('Pais'),
+        # 4. Inserir endereço se fornecido
+        if endereco:
+            cep_limpo = endereco.get('CEP', '').replace('-', '')
+            print(f"Inserindo endereço - CEP: {cep_limpo}")
+            cursor.execute(
+                "INSERT INTO Endereco (PessoaID, Rua, Numero, Bairro, Cidade, Estado, CEP, Pais) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    pessoa_id,
+                    endereco.get('Rua'),
+                    endereco.get('Numero'),
+                    endereco.get('Bairro'),
+                    endereco.get('Cidade'),
+                    endereco.get('Estado'),
+                    cep_limpo,
+                    endereco.get('Pais', 'BRA')
+                )
             )
-        )
+            print("Endereço inserido com sucesso")
         
-        # Confirmar as alterações
         conexao.commit()
-        
+        print("Transação commitada")
+
         return jsonify({
             "success": True,
-            "message": "Cliente cadastrado com sucesso",
-            "cliente_id": pessoa_id,
+            "message": "Autor cadastrado com sucesso",
+            "autor_id": pessoa_id,
             "matricula": matricula
         }), 201
         
+    except mysql.connector.IntegrityError as e:
+        print("ERRO DE INTEGRIDADE:", str(e))
+        if 'conexao' in locals():
+            conexao.rollback()
+            print("Rollback executado")
+        error_message = "Erro de integridade no banco de dados"
+        if "Duplicate entry" in str(e):
+            if "CPF" in str(e):
+                error_message = "CPF já cadastrado"
+            elif "Email" in str(e):
+                error_message = "Email já cadastrado"
+            elif "NomeUsuario" in str(e):
+                error_message = "Nome de usuário já existe"
+        print("Mensagem de erro:", error_message)
+        return jsonify({
+            "success": False,
+            "message": error_message
+        }), 400
+        
     except Exception as e:
+        print("ERRO INESPERADO:", str(e))
+        print("Tipo do erro:", type(e).__name__)
+        if 'conexao' in locals():
+            conexao.rollback()
+            print("Rollback executado")
         return jsonify({
             "success": False,
             "message": "Erro no servidor",
-            "error": str(e)
+            "error": str(e),
+            "error_type": type(e).__name__
         }), 500
         
     finally:
-        cursor.close()
-        conexao.close()
+        if 'cursor' in locals(): 
+            cursor.close()
+            print("Cursor fechado")
+        if 'conexao' in locals(): 
+            conexao.close()
+            print("Conexão fechada")
+        print("=== FIM DA REQUISIÇÃO ===\n")
 
+        
 
 @app.route('/cadastro-colaborador', methods=['POST'])
 def cadastro_colaborador():
