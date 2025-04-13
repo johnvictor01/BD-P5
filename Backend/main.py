@@ -21,6 +21,7 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)  # Permite credenciais (cookies)
 app.secret_key = 'sua_chave_secreta'
 
+# Commit
 #=======================================================================================================
 # Conexão Do banco
 #=======================================================================================================

@@ -1,4 +1,5 @@
 <template>
+    <div :class="['cadastro-container', { 'highlight': highlight }]">
     <div class="cadastro-container">
       <h2>Cadastro de Cliente</h2>
       <form @submit.prevent="submitForm" class="cadastro-form">
@@ -126,6 +127,8 @@
         </div>
       </form>
     </div>
+  </div>
+
   </template>
   
  <script>
@@ -294,6 +297,12 @@ export default {
       };
       this.confirmarSenha = "";
     }
+  },
+  props: {
+    highlight: {
+      type: Boolean,
+      default: false
+    }
   }
 }
 </script>
@@ -410,4 +419,16 @@ export default {
       gap: 0;
     }
   }
+
+  .highlight {
+  animation: pulse 1.5s infinite;
+  border: 2px solid #3498db;
+  border-radius: 8px;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+}
   </style>
