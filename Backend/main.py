@@ -1307,6 +1307,176 @@ def cadastro_cliente():
         conexao.close()
 
 
+@app.route('/cadastro-autor', methods=['POST'])
+def cadastro_autor():
+    # Obter dados JSON da requisição
+    data = request.get_json()
+    print(data)
+    
+    # Extrair dados básicos
+    pessoa = data.get('pessoa', {})
+    autor = data.get('autor', {})
+    endereco = data.get('endereco', {})
+    
+    try:
+        # Conectar ao banco de dados
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        
+        # Inserir na tabela Pessoa
+        cursor.execute(
+            "INSERT INTO Pessoa (Nome, Sobrenome, CPF, DataNascimento, Email, Telefone) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (
+                pessoa.get('Nome'),
+                pessoa.get('Sobrenome'),
+                pessoa.get('CPF', '').replace('.', '').replace('-', ''),
+                pessoa.get('DataNascimento'),
+                pessoa.get('Email'),
+                pessoa.get('Telefone', '').replace('(', '').replace(')', '').replace(' ', '').replace('-', '')
+            )
+        )
+        pessoa_id = cursor.lastrowid
+        
+        # Gerar matrícula simples
+        matricula = f"CL{pessoa_id:04d}"
+        
+        # Inserir na tabela Cliente (com hash da senha)
+        cursor.execute(
+            "INSERT INTO Autor (PessoaID, MatriculaAutor, NomeUsuario, Senha) "
+            "VALUES (%s, %s, %s, %s)",
+            (
+                pessoa_id,
+                matricula,
+                autor.get('NomeUsuario'),
+                autor.get('Senha', '')
+            )
+        )
+
+        # Inserir na tabela Endereco
+        cursor.execute(
+            "INSERT INTO Endereco (PessoaID, Rua, Numero, Bairro, Cidade, Estado, CEP, Pais) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (
+                pessoa_id,
+                endereco.get('Rua'),
+                endereco.get('Numero'),
+                endereco.get('Bairro'),
+                endereco.get('Cidade'),
+                endereco.get('Estado'),
+                endereco.get('CEP'),
+                endereco.get('Pais'),
+            )
+        )
+        
+        # Confirmar as alterações
+        conexao.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Cliente cadastrado com sucesso",
+            "cliente_id": pessoa_id,
+            "matricula": matricula
+        }), 201
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": "Erro no servidor",
+            "error": str(e)
+        }), 500
+        
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+@app.route('/cadastro-colaborador', methods=['POST'])
+def cadastro_colaborador():
+    # Obter dados JSON da requisição
+    data = request.get_json()
+    print(data)
+    
+    # Extrair dados básicos
+    pessoa = data.get('pessoa', {})
+    funcionario = data.get('funcionario', {})
+    endereco = data.get('endereco', {})
+    
+    try:
+        # Conectar ao banco de dados
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        
+        # Inserir na tabela Pessoa
+        cursor.execute(
+            "INSERT INTO Pessoa (Nome, Sobrenome, CPF, DataNascimento, Email, Telefone) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (
+                pessoa.get('Nome'),
+                pessoa.get('Sobrenome'),
+                pessoa.get('CPF', '').replace('.', '').replace('-', ''),
+                pessoa.get('DataNascimento'),
+                pessoa.get('Email'),
+                pessoa.get('Telefone', '').replace('(', '').replace(')', '').replace(' ', '').replace('-', '')
+            )
+        )
+        pessoa_id = cursor.lastrowid
+        
+        # Gerar matrícula simples
+        # matricula = f"CL{pessoa_id:04d}"
+        
+        # Inserir na tabela Cliente (com hash da senha)
+        cursor.execute(
+            "INSERT INTO Funcionario (PessoaID, NomeUsuario, Senha, Cargo, DataContratacao, Salario) "
+            "VALUES (%s, %s, %s, %s)",
+            (
+                pessoa_id,
+                funcionario.get('NomeUsuario'),
+                funcionario.get('Senha', ''),
+                funcionario.get('Cargo'),
+                funcionario.get('DataContratacao'),
+                funcionario.get('Salario', 0)
+            )
+        )
+
+        # Inserir na tabela Endereco
+        cursor.execute(
+            "INSERT INTO Endereco (PessoaID, Rua, Numero, Bairro, Cidade, Estado, CEP, Pais) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (
+                pessoa_id,
+                endereco.get('Rua'),
+                endereco.get('Numero'),
+                endereco.get('Bairro'),
+                endereco.get('Cidade'),
+                endereco.get('Estado'),
+                endereco.get('CEP'),
+                endereco.get('Pais'),
+            )
+        )
+        
+        # Confirmar as alterações
+        conexao.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Cliente cadastrado com sucesso",
+            "cliente_id": pessoa_id,
+            "matricula": matricula
+        }), 201
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": "Erro no servidor",
+            "error": str(e)
+        }), 500
+        
+    finally:
+        cursor.close()
+        conexao.close()
+
+
 #=======================================================================================================
 # Operações de UPDATE 
 #=======================================================================================================
