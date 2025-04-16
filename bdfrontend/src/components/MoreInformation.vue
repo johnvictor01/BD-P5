@@ -1,7 +1,7 @@
 <template>
     <div class="more-information">
       <h1>Destaques das nossas obras de arte</h1>
-      <Obras :obras="obras" @cadastrar="$emit('cadastrar')"/>
+      <Obras :cadBOOL="1" :obras="obras" @cadastrar="$emit('cadastrar')"/>
     </div>
   </template>
   

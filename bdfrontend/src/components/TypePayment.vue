@@ -1,14 +1,16 @@
 <template>
   <div>
     <CabecalhoPessoa />
+    <Aprovede v-show="mostrarPopup" :show="mostrarPopup" />
     <div class="payment-container">
-      <h2>Finalize sua Compra</h2>
+      <p id="NameGaleria">GALERIA ARTE NOVA</p>
+      <h2 id="Finish">Finalize sua Compra</h2>
       
       <!-- Formulário de Identificação -->
       <div class="identity-form" v-if="!identityConfirmed">
         <h3>Para oferecer as melhores condições:</h3>
         <div class="form-group">
-          <label>Qual seu time do coração?</label>
+          <label style="font-size: 18px;">Qual seu time do coração?</label><br>
           <input type="text" v-model="userIdentity.time" placeholder="Ex: Flamengo, Vasco...">
         </div>
         <div class="form-group">
@@ -83,14 +85,21 @@
 
 <script>
 import axios from 'axios';
+import Aprovede from '../components/Aprovede.vue'; 
+import CabecalhoPessoa from '../components/CabecalhoPessoa.vue';
 
 export default {
+    components:{
+      Aprovede,
+      CabecalhoPessoa
+    },
   data() {
     return {
+      mostrarPopup: false, // Movido para cá
       userIdentity: {
         time: '',
         assisteOnePiece: false,
-        ehDeSousa: false
+        ehDeSousa: false,
       },
       identityConfirmed: false,
       selectedMethod: null,
@@ -192,41 +201,121 @@ export default {
     this.identityConfirmed = true;
     await this.calculateCartTotal(); // Agora é assíncrono
   },
-  // ... outros métodos
+
     selectMethod(method) {
       this.selectedMethod = method;
     },
-    async processPayment() {
-      if (!this.selectedMethod && !this.isVascoFan) {
-        alert('Selecione um método de pagamento');
-        return;
-      }
 
-      const paymentData = {
-    metodo_pagamento: this.isVascoFan ? 'vasco' : this.selectedMethod, // Alterado para 'vasco' e campo correto
-    valor_original: this.subtotal,
-    desconto: this.discount,
-    valor_final: this.total,
-    preferencias: {  // Alterado para 'preferencias'
-      time: this.userIdentity.time.toLowerCase(), // Padroniza para minúsculas
-      assisteOnePiece: this.isOnePieceFan, // Nome correto
-      ehDeSousa: this.isFromSousa // Nome correto
-    }
-  };
 
-      try {
-        const response = await axios.post('http://localhost:5000/finalizar-compra', paymentData);
-        this.$router.push(`/Client`);
-      } catch (error) {
-        console.error('Erro no pagamento:', error);
-        alert('Erro ao processar pagamento');
-      }
+  async processPayment() {
+    if (!this.selectedMethod && !this.isVascoFan) {
+      alert('Selecione um método de pagamento');
+      return;
     }
+
+    const paymentData = {
+      metodo_pagamento: this.isVascoFan ? 'vasco' : this.selectedMethod,
+      valor_original: this.subtotal,
+      desconto: this.discount,
+      valor_final: this.total,
+      preferencias: {
+        time: this.userIdentity.time.toLowerCase(),
+        assisteOnePiece: this.isOnePieceFan,
+        ehDeSousa: this.isFromSousa
+      }
+    };
+
+    try {
+      // Mostra o popup
+      this.mostrarPopup = true;
+      console.log("Popup mostrado:", this.mostrarPopup);
+      
+      // Simula o envio dos dados (remova o comentário quando o endpoint estiver pronto)
+      const response = await axios.post('http://localhost:5000/finalizar-compra', paymentData);
+      
+      // Esconde o popup após 2.5 segundos e redireciona
+      setTimeout(() => {
+        this.mostrarPopup = false;
+        this.$router.push('/Client'); // Descomente esta linha
+      }, 2500);
+      
+    } catch (error) {
+      console.error('Erro no pagamento:', error);
+      alert('Erro ao processar pagamento');
+      this.mostrarPopup = false;
+    }
+  }
   }
 };
 </script>
 
 <style scoped>
+
+
+.payment-container {
+  margin-top: 10rem;
+  position: relative;
+  min-width: 100px;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 16px;
+  z-index: 1;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.payment-container::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 18px;
+  padding: 2px;
+  background: linear-gradient(270deg, #ff512f, #dd2476, #ff512f);
+  background-size: 600% 600%;
+  z-index: -1;
+  animation: neonBorder 6s ease infinite;
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: destination-out;
+  filter: blur(4px);
+}
+
+#NameGaleria {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+  background-image: linear-gradient(to right, #5f2517, #feb47b);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+#Finish{
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.identity-form{
+  padding: 20px;
+}
+
+.form-group{
+  padding: 10px;
+}
+
 .vasco-alert {
   background-color: #000033;
   color: white;
@@ -237,12 +326,12 @@ export default {
 }
 
 .payment-methods {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 15px;
   margin: 20px 0;
 }
-
 .method-card {
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -270,6 +359,7 @@ export default {
 
 .summary-row {
   display: flex;
+  padding: 20px;
   justify-content: space-between;
   margin: 8px 0;
 }

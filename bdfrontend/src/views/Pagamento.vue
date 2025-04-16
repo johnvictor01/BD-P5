@@ -23,10 +23,11 @@ export default {
 <style scoped>
 .pagamento-container {
   display: flex;
-  place-items: center; /* Alinha horizontal e verticalmente */
-  min-height: 100vh;   /* Faz ocupar a altura total da tela */
+  justify-content: center; /* Alinha no centro horizontalmente */
+  align-items: center;     /* Alinha no centro verticalmente */
+  min-height: 100vh;
   padding: 1rem;
-  background-color: #f5f5f5; /* opcional: só para ver melhor o container */
+  background-color: #f5f5f5;
 }
 
 

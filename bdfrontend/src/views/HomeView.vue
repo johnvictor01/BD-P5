@@ -1,9 +1,8 @@
 <template>
   <div>
     <CabecalhoHome/>
-    <MoreInformation :obras="obrasFormatadas" @cadastrar="scrollToCadastro"/>
-    
-    <button class="Button" @click="scrollToCadastro">Cadastre-se e começe a comprar!</button>
+    <MoreInformation  :obras="obrasFormatadas" @cadastrar="scrollToCadastro" />
+        <button class="Button" @click="scrollToCadastro">Cadastre-se e começe a comprar!</button>
     <FormsCadCliente v-if="type" ref="cadastroForm" :highlight="highlightCadastro"/>
     <Contacts/>
     <Footer/>

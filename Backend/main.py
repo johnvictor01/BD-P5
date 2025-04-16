@@ -506,7 +506,6 @@ def obras_biblio():
     # Verifica se o usuário está autenticado
     if not matricula_cliente:
         return jsonify({"erro": "Não autorizado"}), 401
-    
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
@@ -1044,10 +1043,8 @@ def finalizar_compra():
                     "erro": "Desconto inválido",
                     "detalhes": f"Desconto máximo permitido é 35% (R$ {valor_original * 0.35:.2f})"
                 }), 400
-
             # 5. Gera ID único para o pedido
             pedido_id = f"PED-{datetime.now().strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
-
             # 6. Inicia transação
             cursor.execute("START TRANSACTION")
 
@@ -1057,7 +1054,6 @@ def finalizar_compra():
                 VALUES (%s, %s, %s, NOW())
             """, (pessoa_id, pedido_id, valor_final))
             venda_id = cursor.lastrowid
-
             # 8. Insere itens do pedido
             for item in itens:
                 cursor.execute("""

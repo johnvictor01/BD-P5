@@ -17,7 +17,6 @@
         </div>
       </div>
     </div>
-
     <!-- Modal -->
     <div v-if="modalAberto" class="modal-overlay" @click.self="fecharModal">
       <div class="modal-content">
@@ -32,10 +31,10 @@
             <div v-if="obraSelecionada.autor" class="info-extra">
               <p><strong>Autor:</strong> {{ obraSelecionada.autor }}</p>
             </div>
-            <div class="compra-message">
-              <p>Cadastre-se para adquirir esta obra!</p>
-              <button class="btn-cadastro" @click="irParaCadastro">Quero me cadastrar</button>
-            </div>
+            <div v-if="cadBOOL === 1" class="compra-message">
+    <p>Cadastre-se para adquirir esta obra!</p>
+  <button class="btn-cadastro" @click="irParaCadastro">Quero me cadastrar</button>
+</div>
           </div>
         </div>
       </div>
@@ -51,7 +50,13 @@ export default {
       type: Array,
       required: true,
       default: () => []
-    }
+    },
+    cadBOOL: {
+    type: Number,
+    required: false,
+    default: 0,
+    validator: value => [0, 1].includes(value) // Garante que só aceita 0 ou 1
+  },
   },
   data() {
     return {
@@ -61,6 +66,7 @@ export default {
   },
   methods: {
     abrirModal(obra) {
+      console.log("cadBOOL está como:", this.cadBOOL); // <--- debug
       this.obraSelecionada = obra;
       this.modalAberto = true;
       document.body.style.overflow = 'hidden'; // Impede scroll da página principal
@@ -73,7 +79,11 @@ export default {
       this.$emit('cadastrar');
       this.fecharModal();
     }
-  }
+  },
+  mounted() {
+  console.log('Props recebidas:', this.$props);
+  console.log('Valor de cadBOOL:', this.cadBOOL);
+}
 };
 </script>
 
