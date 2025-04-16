@@ -1085,7 +1085,7 @@ def finalizar_compra():
 
             # Confirma transação
             conexao.commit()
-
+    
             # Atualiza quantidade de obras compradas (se a stored procedure existir)
             try:
                 cursor.callproc('AtualizarQuantidadeObrasCompradas', [matricula_cliente])
@@ -1792,7 +1792,6 @@ def autorizar_venda():
             WHERE ObraID = %s
         """, (dados['id_obra'],))
         
-        print("Depois de executar na galeria")
         conexao.commit()
         print("Obra autorizada com sucesso")
         return jsonify({

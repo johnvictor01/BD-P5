@@ -1,4 +1,4 @@
- CREATE VIEW PagamentosPorPix AS
+CREATE VIEW PagamentosPorPix AS
 SELECT * FROM Pagamento
 WHERE MetodoPagamento = 'Pix';
 
