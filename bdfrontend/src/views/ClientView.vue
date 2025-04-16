@@ -10,6 +10,7 @@
     <br />
     <div>
     <h1 v-if=" compra === false" >Vamos às compras?</h1>
+    <p>Com base em seus dados recomendamos a você artes  do tipo: <p class="REC">{{ this.recomendacoes }}</p></p> 
     <p v-if="compra === true" style="color: red; font-size: 1.5rem;">Ops... parece que não tem nenhuma obra disponivel
        para compra no momento!</p>
   </div>
@@ -47,7 +48,8 @@ export default {
       obrasDisponiveis: [], // Armazena as obras disponíveis
       obrasNaBiblio: [], // Armazena as obras da biblioteca
       loading: false,
-      compra : true
+      compra : true,
+      recomendacoes: ""
     };
   },
   methods: {
@@ -63,6 +65,18 @@ export default {
         this.$router.push('/LoginClient');  // Redireciona para a página de login em caso de erro
       }
     },
+    async buscarRecomendacoes() {
+  try {
+    const response = await axios.get('http://localhost:5000/recomendacao-cliente-logado');
+    console.log("Recomendações recebidas:", response.data);
+    this.recomendacoes = response.data.RecomendacoesTexto
+    ;
+  } catch (error) {
+    console.error('Erro ao buscar recomendações:', error);
+    this.recomendacoes = "Nenhuma recomendação disponível.";
+  }
+},
+
 
     async buscarObrasDisponiveis() {
       if (!this.usuarioLogado) {
@@ -118,6 +132,7 @@ export default {
   },
   async mounted() {
     await this.buscarUsuarioLogado(); 
+    await this.buscarRecomendacoes();  
     this.buscarObrasDisponiveis(); 
   }
 };
@@ -126,6 +141,14 @@ export default {
 <style>
 p{
   margin-top: 4rem;
+  text-decoration: none;
+
+}
+p .REC{
+  color: #FF5733; /* Cor laranja para o texto "recomendado" */
+  font-weight: bold; /* Negrito para o texto "recomendado" */
+  font-size: 1.5rem; /* Aumenta o tamanho da fonte */
+  text-decoration: underline; /* Sublinha o texto "recomendado" */
 }
 .Filtros {
   margin-top: 2rem;

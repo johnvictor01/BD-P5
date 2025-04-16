@@ -145,6 +145,40 @@ def dados_cliente_logado():
         conexao.close()
 
 
+@app.route('/recomendacao-cliente-logado', methods=['GET'])
+def recomendacao_cliente_logado():
+    matricula_cliente = session.get('matricula_cliente')
+    print(matricula_cliente)
+    if not matricula_cliente:
+        return jsonify({"erro": "Usuário não autenticado"}), 401
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        query = """
+        SELECT Matricula, RecomendacoesTexto
+        FROM ViewRecomendacoesCliente
+        WHERE Matricula = %s
+        LIMIT 1;
+        """
+        cursor.execute(query, (matricula_cliente,))
+        dados = cursor.fetchone()
+        print(dados)
+        if not dados:
+            return jsonify({"erro": "Recomendação não encontrada"}), 404
+
+        return jsonify(dados)
+
+    except Exception as e:
+        print(f"Erro ao buscar recomendações na view: {str(e)}")
+        return jsonify({"erro": "Erro interno"}), 500
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
 
 # Usuário Logado
 @app.route('/usuario-logado', methods=['GET'])
