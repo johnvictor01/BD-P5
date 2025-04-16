@@ -32,9 +32,43 @@
       </div>
 
       <div class="input-container">
-        <label for="estilo">Estilo de Arte</label>
-        <input type="text" id="estilo" v-model="estilo" required />
-      </div>
+  <label for="estilo">Estilo de Arte</label>
+  <select id="estilo" v-model="estilo" required>
+    <option disabled value="">Selecione um estilo</option>
+    <option value="Expressionismo">Expressionismo</option>
+    <option value="Abstrato">Abstrato</option>
+    <option value="Realismo">Realismo</option>
+    <option value="Surrealismo">Surrealismo</option>
+    <option value="Cubismo">Cubismo</option>
+    <option value="Impressionismo">Impressionismo</option>
+    <option value="Pós-Impressionismo">Pós-Impressionismo</option>
+    <option value="Fauvismo">Fauvismo</option>
+    <option value="Futurismo">Futurismo</option>
+    <option value="Dadaísmo">Dadaísmo</option>
+    <option value="Construtivismo">Construtivismo</option>
+    <option value="Bauhaus">Bauhaus</option>
+    <option value="De Stijl">De Stijl</option>
+    <option value="Pop Art">Pop Art</option>
+    <option value="Op Art">Op Art</option>
+    <option value="Minimalismo">Minimalismo</option>
+    <option value="Arte Conceitual">Arte Conceitual</option>
+    <option value="Hiperrealismo">Hiperrealismo</option>
+    <option value="Street Art">Street Art</option>
+    <option value="Arte Digital">Arte Digital</option>
+    <option value="Visionista">Visionista</option>
+    <option value="Paisagista">Paisagista</option>
+    <option value="Retratista">Retratista</option>
+    <option value="Barroco">Barroco</option>
+    <option value="Rococó">Rococó</option>
+    <option value="Neoclassicismo">Neoclassicismo</option>
+    <option value="Romantismo">Romantismo</option>
+    <option value="Academicismo">Academicismo</option>
+    <option value="Pré-Rafaelitas">Pré-Rafaelitas</option>
+    <option value="Simbolismo">Simbolismo</option>
+    <option value="Art Nouveau">Art Nouveau</option>
+    <option value="Art Déco">Art Déco</option>
+  </select>
+</div>
 
       <div class="input-container">
         <label for="paisGaleria">País da Galeria</label>
