@@ -1832,6 +1832,8 @@ def remover_obra():
         cursor.execute("START TRANSACTION")
         
         # 1. Remove da galeria primeiro (devido à restrição de chave estrangeira)
+        
+        cursor.execute("DELETE FROM pedido WHERE ObraID = %s", (id_obra,))
         cursor.execute("DELETE FROM galeria WHERE ObraID = %s", (id_obra,))
         
         # 2. Remove da obra de arte - CORREÇÃO: nome correto da tabela é ObraDeArte (com E maiúsculo)
